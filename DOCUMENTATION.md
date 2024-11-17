@@ -64,7 +64,7 @@ Following logic operations are supported:
 |`and`           |Logical AND, True only if x and y both match input line. (eg: `"x" and "y"`)|
 |`or`            |Logical OR, True if either x or y match input line. (eg: `"x" or "y"`)      |
 |`&`             |Similar to AND but with left to right expression short circuiting optimization  |
-|`\|`             |Similar to OR but with left to right expression short circuiting optimization   |
+|`\`             |Similar to OR but with left to right expression short circuiting optimization   |
 |`not`           |Logical NOT, Negate the logical sense of the input. Input must be enclosed in `()` (eg: `not("x")`)|
 
 *klogg* keeps track of used search patterns and provides autocomplete

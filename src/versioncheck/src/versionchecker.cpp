@@ -36,6 +36,26 @@
  * along with klogg.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Copyright (C) 2024 Xiaohuang Zhu
+ *
+ * This file is part of qlogg.
+ *
+ * qlogg is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * qlogg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with qlogg.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <QNetworkProxyFactory>
 #include "versionchecker.h"
 #include "configuration.h"
 #include "log.h"
@@ -99,6 +119,7 @@ VersionChecker::VersionChecker()
     : QObject()
     , manager_( new QNetworkAccessManager( this ) )
 {
+    QNetworkProxyFactory::setUseSystemConfiguration( true );
     manager_->setRedirectPolicy( QNetworkRequest::NoLessSafeRedirectPolicy );
 }
 

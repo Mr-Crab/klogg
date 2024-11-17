@@ -36,6 +36,25 @@
  * along with klogg.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Copyright (C) 2024 Xiaohuang Zhu
+ *
+ * This file is part of qlogg.
+ *
+ * qlogg is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * qlogg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with qlogg.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -51,7 +70,6 @@
 
 #include "configuration.h"
 #include "crawlerwidget.h"
-#include "downloader.h"
 #include "iconloader.h"
 #include "pathline.h"
 #include "quickfindmux.h"
@@ -120,7 +138,6 @@ class MainWindow : public QMainWindow {
     void openContainingFolder();
     void openInEditor();
     void openClipboard();
-    void openUrl();
     void editHighlighters();
     void editPredefinedFilters( const QString& newFilter = {} );
     void options();
@@ -205,7 +222,6 @@ class MainWindow : public QMainWindow {
     void writeSettings();
     bool loadFile( const QString& fileName, bool followFile = false );
     bool extractAndLoadFile( const QString& fileName );
-    void openRemoteFile( const QUrl& url );
     void updateTitleBar( const QString& fileName );
     void addRecentFile( const QString& fileName );
     void updateRecentFileActions();
@@ -264,7 +280,6 @@ class MainWindow : public QMainWindow {
     QAction* openContainingFolderAction;
     QAction* openInEditorAction;
     QAction* openClipboardAction;
-    QAction* openUrlAction;
     QAction* overviewVisibleAction;
     QAction* lineNumbersVisibleInMainAction;
     QAction* lineNumbersVisibleInFilteredAction;
@@ -280,8 +295,6 @@ class MainWindow : public QMainWindow {
     QAction* aboutQtAction;
     QAction* predefinedFiltersDialogAction;
     QAction* reportIssueAction;
-    QAction* joinDiscordAction;
-    QAction* joinTelegramAction;
     QAction* generateDumpAction;
     QActionGroup* encodingGroup;
     QAction* addToFavoritesAction;

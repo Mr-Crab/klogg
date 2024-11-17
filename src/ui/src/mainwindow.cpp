@@ -36,6 +36,25 @@
  * along with klogg.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Copyright (C) 2024 Xiaohuang Zhu
+ *
+ * This file is part of qlogg.
+ *
+ * qlogg is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * qlogg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with qlogg.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 // This file implements MainWindow. It is responsible for creating and
 // managing the menus, the toolbar, and the CrawlerWidget. It also
 // load/save the settings on opening/closing of the app
@@ -86,7 +105,6 @@
 #include "crawlerwidget.h"
 #include "decompressor.h"
 #include "dispatch_to.h"
-#include "downloader.h"
 #include "encodings.h"
 #include "favoritefiles.h"
 #include "highlightersdialog.h"
@@ -362,9 +380,6 @@ void MainWindow::reTranslateUI()
     openClipboardAction->setText( transAction( action::openClipboardText ) );
     openClipboardAction->setStatusTip( transAction( action::openClipboardStatusTip ) );
 
-    openUrlAction->setText( transAction( action::openUrlText ) );
-    openUrlAction->setStatusTip( transAction( action::openUrlStatusTip ) );
-
     overviewVisibleAction->setText( transAction( action::overviewVisibleText ) );
 
     lineNumbersVisibleInMainAction->setText( transAction( action::lineNumbersVisibleInMainText ) );
@@ -393,12 +408,6 @@ void MainWindow::reTranslateUI()
 
     reportIssueAction->setText( transAction( action::reportIssueText ) );
     reportIssueAction->setStatusTip( transAction( action::reportIssueStatusTip ) );
-
-    joinDiscordAction->setText( transAction( action::joinDiscordText ) );
-    joinDiscordAction->setStatusTip( transAction( action::joinDiscordStatusTip ) );
-
-    joinTelegramAction->setText( transAction( action::joinTelegramText ) );
-    joinTelegramAction->setStatusTip( transAction( action::joinTelegramStatusTip ) );
 
     generateDumpAction->setText( transAction( action::generateDumpText ) );
     generateDumpAction->setStatusTip( transAction( action::generateDumpStatusTip ) );
@@ -545,10 +554,6 @@ void MainWindow::createActions()
     connect( openClipboardAction, &QAction::triggered, this,
              [ this ]( auto ) { this->openClipboard(); } );
 
-    openUrlAction = new QAction( tr( action::openUrlText ), this );
-    openUrlAction->setStatusTip( tr( action::openUrlStatusTip ) );
-    connect( openUrlAction, &QAction::triggered, this, [ this ]( auto ) { this->openUrl(); } );
-
     overviewVisibleAction = new QAction( tr( action::overviewVisibleText ), this );
     overviewVisibleAction->setCheckable( true );
     overviewVisibleAction->setChecked( config.isOverviewVisible() );
@@ -614,20 +619,6 @@ void MainWindow::createActions()
     reportIssueAction->setStatusTip( tr( action::reportIssueStatusTip ) );
     connect( reportIssueAction, &QAction::triggered, this,
              []( auto ) { IssueReporter::reportIssue( IssueTemplate::Bug ); } );
-
-    joinDiscordAction = new QAction( tr( action::joinDiscordText ), this );
-    joinDiscordAction->setStatusTip( tr( action::joinDiscordStatusTip ) );
-    connect( joinDiscordAction, &QAction::triggered, this, []( auto ) {
-        QUrl url( "https://discord.gg/DruNyQftzB" );
-        QDesktopServices::openUrl( url );
-    } );
-
-    joinTelegramAction = new QAction( tr( action::joinTelegramText ), this );
-    joinTelegramAction->setStatusTip( tr( action::joinTelegramStatusTip ) );
-    connect( joinTelegramAction, &QAction::triggered, this, []( auto ) {
-        QUrl url( "https://t.me/joinchat/JeIBxstIfp4xZTk6" );
-        QDesktopServices::openUrl( url );
-    } );
 
     generateDumpAction = new QAction( tr( action::generateDumpText ), this );
     generateDumpAction->setStatusTip( tr( action::generateDumpStatusTip ) );
@@ -713,7 +704,6 @@ void MainWindow::updateShortcuts()
     setShortcuts( openInEditorAction, ShortcutAction::MainWindowOpenInEditor );
     setShortcuts( copyPathToClipboardAction, ShortcutAction::MainWindowCopyPathToClipboard );
     setShortcuts( openClipboardAction, ShortcutAction::MainWindowOpenFromClipboard );
-    setShortcuts( openUrlAction, ShortcutAction::MainWindowOpenFromUrl );
     setShortcuts( followAction, ShortcutAction::MainWindowFollowFile );
     setShortcuts( textWrapAction, ShortcutAction::MainWindowTextWrap );
     setShortcuts( reloadAction, ShortcutAction::MainWindowReload );
@@ -743,7 +733,6 @@ void MainWindow::createMenus()
     fileMenu->addAction( newWindowAction );
     fileMenu->addAction( openAction );
     fileMenu->addAction( openClipboardAction );
-    fileMenu->addAction( openUrlAction );
     recentFilesMenu = fileMenu->addMenu( tr( "Open Recent" ) );
     for ( auto i = 0u; i < recentFileActions.size(); ++i ) {
         recentFilesMenu->addAction( recentFileActions[ i ] );
@@ -818,8 +807,6 @@ void MainWindow::createMenus()
     helpMenu->addAction( showDocumentationAction );
     helpMenu->addSeparator();
     helpMenu->addAction( reportIssueAction );
-    helpMenu->addAction( joinDiscordAction );
-    helpMenu->addAction( joinTelegramAction );
     helpMenu->addSeparator();
     helpMenu->addAction( generateDumpAction );
     helpMenu->addSeparator();
@@ -932,55 +919,10 @@ void MainWindow::open()
         defaultDir = fileInfo.path();
     }
 
-    const auto selectedFiles = QFileDialog::getOpenFileUrls(
-        this, tr( "Open file" ), QUrl::fromLocalFile( defaultDir ), tr( "All files (*)" ) );
-
-    std::vector<QUrl> localFiles;
-    std::vector<QUrl> remoteFiles;
-
-    std::partition_copy( selectedFiles.cbegin(), selectedFiles.cend(),
-                         std::back_inserter( localFiles ), std::back_inserter( remoteFiles ),
-                         []( const QUrl& url ) { return url.isLocalFile(); } );
-
-    for ( const auto& localFile : localFiles ) {
-        loadFile( localFile.toLocalFile() );
-    }
-
-    for ( const auto& remoteFile : remoteFiles ) {
-        openRemoteFile( remoteFile );
-    }
-}
-
-void MainWindow::openRemoteFile( const QUrl& url )
-{
-    Downloader downloader;
-
-    QProgressDialog progressDialog;
-    progressDialog.setLabelText( tr( "Downloading %1" ).arg( url.toString() ) );
-
-    connect( &downloader, &Downloader::downloadProgress,
-             [ &progressDialog ]( qint64 bytesReceived, qint64 bytesTotal ) {
-                 const auto progress = calculateProgress( bytesReceived, bytesTotal );
-                 progressDialog.setRange( 0, 100 );
-                 progressDialog.setValue( progress );
-             } );
-
-    connect( &downloader, &Downloader::finished,
-             [ &progressDialog ]( bool isOk ) { progressDialog.done( isOk ? 0 : 1 ); } );
-
-    auto tempFile = new QTemporaryFile( tempDir_.filePath( url.fileName() ), this );
-    if ( tempFile->open() ) {
-        downloader.download( url, tempFile );
-        if ( !progressDialog.exec() ) {
-            loadFile( tempFile->fileName() );
-        }
-        else {
-            QMessageBox::critical( this, tr( "Klogg - File download" ), downloader.lastError() );
-        }
-    }
-    else {
-        QMessageBox::critical( this, tr( "Klogg - File download" ),
-                               tr( "Failed to create temp file" ) );
+    QStringList fileNames = QFileDialog::getOpenFileNames( this, tr( "Open file" ), defaultDir,
+                                                           tr( "All files (*)" ) );
+    for ( int i = 0; i < fileNames.size(); i++ ) {
+        loadFile(fileNames[i]);
     }
 }
 
@@ -1143,20 +1085,6 @@ void MainWindow::tryOpenClipboard( int tryTimes )
 void MainWindow::openClipboard()
 {
     tryOpenClipboard( ClipboardMaxTry );
-}
-
-void MainWindow::openUrl()
-{
-    bool ok;
-    const auto urlInClipboard = QUrl::fromUserInput( QApplication::clipboard()->text() );
-    const auto selectedUrl = urlInClipboard.isValid() ? urlInClipboard.toString() : QString{};
-
-    QString url
-        = QInputDialog::getText( this, tr( "Open URL as log file" ), tr( "URL to download:" ),
-                                 QLineEdit::Normal, selectedUrl, &ok );
-    if ( ok && !url.isEmpty() ) {
-        openRemoteFile( url );
-    }
 }
 
 // Opens the 'Highlighters' dialog box
