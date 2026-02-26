@@ -4,10 +4,11 @@ include(CPM)
 
 set(_TMP_CPM_USE_LOCAL_PACKAGES ${CPM_USE_LOCAL_PACKAGES})
 
-cpmaddpackage("gh:simdutf/simdutf@5.6.2")
+cpmaddpackage("gh:simdutf/simdutf@8.0.0")
 cpmaddpackage("gh:foonathan/type_safe@0.2.4")
-cpmaddpackage("gh:RoaringBitmap/CRoaring@4.2.1")
-cpmaddpackage("gh:lemire/streamvbyte@1.0.0")
+cpmaddpackage("gh:RoaringBitmap/CRoaring@4.5.1")
+set(ROARING_BUILD_CPP ON CACHE BOOL "Build the C++ wrapper" FORCE)
+cpmaddpackage("gh:lemire/streamvbyte@2.0.0")
 
 if(APPLE)
   cpmaddpackage(
@@ -107,10 +108,9 @@ else()
   target_include_directories(klogg_uchardet_wrapper INTERFACE ${UCHARDET_INCLUDE_DIR})
 endif()
 
-if(${QT_VERSION_MAJOR} EQUAL 6) 
 set(CPM_USE_LOCAL_PACKAGES OFF)
-endif()
 
+# TODO: Need replacement in the future
 cpmaddpackage(
   NAME
   KF5Archive
@@ -127,10 +127,8 @@ if(NOT KF5Archive_ADDED)
   target_link_libraries(klogg_karchive INTERFACE KF5::Archive)
 endif()
 
-if(${QT_VERSION_MAJOR} EQUAL 6)
 message("Resetting CPM_USE_LOCAL_PACKAGES to ${_TMP_CPM_USE_LOCAL_PACKAGES}")
 set(CPM_USE_LOCAL_PACKAGES ${_TMP_CPM_USE_LOCAL_PACKAGES})
-endif()
 
 cpmaddpackage(
   NAME
@@ -171,23 +169,21 @@ cpmaddpackage(
   NAME
   KDSingleApplication
   GITHUB_REPOSITORY
-  variar/KDSingleApplication
+  KDAB/KDSingleApplication
   GIT_TAG
-  5b30db30266f92bc01f1439777803ce8dbf16c79
-  DOWNLOAD_ONLY
+  master
+  EXCLUDE_FROM_ALL
   YES
+  OPTIONS
+  "KDSingleApplication_STATIC ON"
+  "KDSingleApplication_TESTS OFF"
+  "KDSingleApplication_EXAMPLES OFF"
+  "KDSingleApplication_DOCS OFF"
 )
 if(KDSingleApplication_ADDED)
-  add_library(
-    kdsingleapp STATIC ${KDSingleApplication_SOURCE_DIR}/src/kdsingleapplication.cpp
-                     ${KDSingleApplication_SOURCE_DIR}/src/kdsingleapplication_localsocket.cpp
-  )
-
-  target_include_directories(kdsingleapp PUBLIC ${KDSingleApplication_SOURCE_DIR}/src)
-  target_link_libraries(kdsingleapp Qt${QT_VERSION_MAJOR}::Core)
-  target_compile_definitions(kdsingleapp PUBLIC KDSINGLEAPPLICATION_STATIC_BUILD)
-
-  set_target_properties(kdsingleapp PROPERTIES AUTOMOC ON)
+  # Official target name is lowercase 'kdsingleapplication'.
+  # Alias is KDAB::kdsingleapplication (also lowercase).
+  add_library(kdsingleapp ALIAS kdsingleapplication)
 endif()
 
 
@@ -197,7 +193,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   Cyan4973/xxHash
   VERSION
-  0.8.1
+  0.8.3
   DOWNLOAD_ONLY
   YES
 )
@@ -253,9 +249,9 @@ cpmaddpackage(
   NAME
   KDToolBox
   GITHUB_REPOSITORY
-  KDAB/KDToolBox
+  KDABLabs/KDToolBox
   GIT_TAG
-  6468867d1a46eabe1bcb2cd342f338fe66f06675
+  7ad582e4e0291ed8d20fb5568e7a088f97c89f3f
   DOWNLOAD_ONLY
   YES
 )
@@ -270,13 +266,14 @@ if(KDToolBox_ADDED)
   set_target_properties(kdtoolbox PROPERTIES AUTOMOC ON)
 endif()
 
+#TODO: maybe try with e-dant/watcher?
 cpmaddpackage(
   NAME
   efsw
   GITHUB_REPOSITORY
   SpartanJ/efsw
   GIT_TAG
-  1.4.1
+  1.5.1
   EXCLUDE_FROM_ALL
   YES
   OPTIONS
@@ -293,9 +290,9 @@ cpmaddpackage(
   NAME
   tbb
   GITHUB_REPOSITORY
-  variar/oneTBB
-  GIT_TAG
-  c9be1ac2930f02dea523003ed801b4489f3e6b6e
+  uxlfoundation/oneTBB
+  VERSION
+  2022.3.0
   EXCLUDE_FROM_ALL
   YES
   OPTIONS
@@ -315,7 +312,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   microsoft/mimalloc
   VERSION
-  2.1.7
+  3.2.8
   EXCLUDE_FROM_ALL
   YES
   OPTIONS
@@ -367,7 +364,7 @@ if(KLOGG_USE_SENTRY)
     GITHUB_REPOSITORY
     getsentry/sentry-native
     GIT_TAG
-    a3d58622a807b9dda174cb9fc18fa0f98c89d043
+    b549d9d471d4e1cd7b919333fcfe7c2886b567bd
     EXCLUDE_FROM_ALL
     YES
   )
@@ -383,7 +380,6 @@ set(klogg_cpm_targets
     xxhash
     Catch2
     roaring
-    roaring-headers-cpp
     libuchardet
     robin_hood
     whereami
@@ -414,5 +410,3 @@ foreach(target ${klogg_cpm_targets})
     set_property(TARGET ${target} PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES ${${target}_include_dirs})
   endif()
 endforeach()
-
-

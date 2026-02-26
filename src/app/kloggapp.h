@@ -49,6 +49,9 @@
 #include "session.h"
 #include "uuid.h"
 
+#include <QLockFile>
+#include <QTimer>
+
 #include <kdsingleapplication.h>
 
 #include "mainwindow.h"
@@ -99,19 +102,33 @@ class KloggApp : public QApplication {
         }
     }
 
-    bool isSecondary() const {
+        bool isSecondary() const
+    {
         return !singleApplication_.isPrimaryInstance();
     }
 
-    qint64 primaryPid() const {
-        return singleApplication_.primaryPid();
+    // The official KDAB KDSingleApplication does not expose primaryPid().
+    // We replicate the logic by reading the QLockFile that KDSingleApplication
+    // creates internally. The lock file path follows the same naming convention
+    // used in kdsingleapplication_localsocket.cpp:
+    //   <tempPath>/kdsingleapp-<appName>.lock
+    qint64 primaryPid() const
+    {
+        const QString lockFilePath = QDir::tempPath() + QLatin1Char( '/' )
+                                     + QStringLiteral( "kdsingleapp-" )
+                                     + singleApplication_.name()
+                                     + QStringLiteral( ".lock" );
+        QLockFile lockFile( lockFilePath );
+        qint64 pid = -1;
+        QString hostname, appname;
+        lockFile.getLockInfo( &pid, &hostname, &appname );
+        return pid;
     }
 
     void sendFilesToPrimaryInstance( std::vector<QString> filenames )
     {
 #ifdef Q_OS_WIN
-        // TODO: fix pid passing
-        ::AllowSetForegroundWindow( static_cast<DWORD>( primaryPid() ) );
+        ::AllowSetForegroundWindow( static_cast<DWORD>(primaryPid()));
 #endif
 
         QTimer::singleShot( 100, [ files = std::move( filenames ), this ] {

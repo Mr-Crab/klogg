@@ -183,7 +183,6 @@ find_package(
   QT
   NAMES
   Qt6
-  Qt5
   COMPONENTS Core
              Widgets
              Concurrent
