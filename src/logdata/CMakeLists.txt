@@ -47,7 +47,6 @@ target_link_libraries(
          roaring-headers-cpp
          roaring-headers
          tbb
-         type_safe
          klogg_uchardet_wrapper
          kdtoolbox
          robin_hood

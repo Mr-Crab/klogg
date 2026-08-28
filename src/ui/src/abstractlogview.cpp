@@ -1817,12 +1817,12 @@ FilePosition AbstractLogView::convertCoordToFilePos( const QPoint& pos ) const
         } );
 
     const auto length
-        = LineColumn{ type_safe::narrow_cast<LineColumn::UnderlyingType>( visibleText.size() ) };
+        = LineColumn{ klogg::narrow_cast<LineColumn::UnderlyingType>( visibleText.size() ) };
 
     auto column = ( columnIt != possibleColumns.end() ? *columnIt : length ) - 1_length;
     if ( useTextWrap_ ) {
         for ( auto i = 0u; i < wrappedLineIndex; ++i ) {
-            column += LineLength{ type_safe::narrow_cast<LineLength::UnderlyingType>(
+            column += LineLength{ klogg::narrow_cast<LineLength::UnderlyingType>(
                 wrappedString.wrappedLine( i ).size() ) };
         }
     }
@@ -1831,7 +1831,7 @@ FilePosition AbstractLogView::convertCoordToFilePos( const QPoint& pos ) const
     }
 
     const auto maxColumn
-        = LineColumn( type_safe::narrow_cast<LineColumn::UnderlyingType>( std::min(
+        = LineColumn( klogg::narrow_cast<LineColumn::UnderlyingType>( std::min(
               lineText.size(), static_cast<decltype( lineText.size() )>(
                                    std::numeric_limits<LineColumn::UnderlyingType>::max() ) ) ) )
           - 1_length;
@@ -1858,7 +1858,7 @@ void AbstractLogView::displayLine( LineNumber line )
 
     const auto portion = selection_.getPortionForLine( line );
     if ( portion.isValid() ) {
-        horizontalScrollBar()->setValue( type_safe::narrow_cast<int>(
+        horizontalScrollBar()->setValue( klogg::narrow_cast<int>(
             portion.endColumn().get() - getNbVisibleCols().get() + 1 ) );
     }
 }
@@ -1913,7 +1913,7 @@ LineLength AbstractLogView::maxLineLength( const klogg::vector<LineNumber>& line
 void AbstractLogView::jumpToEndOfLine()
 {
     const auto selection = selection_.getLines();
-    horizontalScrollBar()->setValue( type_safe::narrow_cast<int>( maxLineLength( selection ).get()
+    horizontalScrollBar()->setValue( klogg::narrow_cast<int>( maxLineLength( selection ).get()
                                                                   - getNbVisibleCols().get() ) );
 }
 
@@ -1928,7 +1928,7 @@ void AbstractLogView::jumpToRightOfScreen()
     klogg::vector<LineNumber> visibleLines( nbVisibleLines.get() );
     std::transform( visibleLinesNumbers.cbegin(), visibleLinesNumbers.cend(), visibleLines.begin(),
                     []( auto number ) { return LineNumber{ number }; } );
-    horizontalScrollBar()->setValue( type_safe::narrow_cast<int>(
+    horizontalScrollBar()->setValue( klogg::narrow_cast<int>(
         maxLineLength( visibleLines ).get() - getNbVisibleCols().get() ) );
 }
 
@@ -1954,7 +1954,7 @@ void AbstractLogView::selectWordAtPosition( const FilePosition& pos )
 {
     const QString line = logData_->getExpandedLineString( pos.line() );
 
-    const int clickPos = type_safe::narrow_cast<int>( pos.column().get() );
+    const int clickPos = klogg::narrow_cast<int>( pos.column().get() );
 
     const auto isWordSeparator = []( QChar c ) {
         return !c.isLetterOrNumber() && c.category() != QChar::Punctuation_Connector;
@@ -1966,11 +1966,11 @@ void AbstractLogView::selectWordAtPosition( const FilePosition& pos )
 
     const auto wordStart
         = std::find_if( line.rbegin() + line.size() - clickPos, line.rend(), isWordSeparator );
-    const auto selectionStart = LineColumn{ type_safe::narrow_cast<LineColumn::UnderlyingType>(
+    const auto selectionStart = LineColumn{ klogg::narrow_cast<LineColumn::UnderlyingType>(
         std::distance( line.begin(), wordStart.base() ) ) };
 
     const auto wordEnd = std::find_if( line.begin() + clickPos, line.end(), isWordSeparator );
-    const auto selectionEnd = LineColumn{ type_safe::narrow_cast<LineColumn::UnderlyingType>(
+    const auto selectionEnd = LineColumn{ klogg::narrow_cast<LineColumn::UnderlyingType>(
         std::distance( line.begin(), wordEnd ) - 1 ) };
 
     selection_.selectPortion( pos.line(), selectionStart, selectionEnd );
@@ -2151,7 +2151,7 @@ LinesCount AbstractLogView::getNbBottomWrappedVisibleLines() const
             QString expandedLine = logData_->getExpandedLineString( unwrappedLineNumber );
             WrappedString wrapped{ expandedLine, visibleColumns };
             wrappedVisibleLines += LinesCount(
-                type_safe::narrow_cast<LinesCount::UnderlyingType>( wrapped.wrappedLinesCount() ) );
+                klogg::narrow_cast<LinesCount::UnderlyingType>( wrapped.wrappedLinesCount() ) );
             unwrappedLines++;
             unwrappedLineNumber--;
         }
@@ -2191,9 +2191,9 @@ void AbstractLogView::updateScrollBars()
     hScrollMaxValue
         = std::min( hScrollMaxValue, static_cast<int64_t>( std::numeric_limits<int>::max() ) );
 
-    horizontalScrollBar()->setRange( 0, type_safe::narrow_cast<int>( hScrollMaxValue ) );
+    horizontalScrollBar()->setRange( 0, klogg::narrow_cast<int>( hScrollMaxValue ) );
     horizontalScrollBar()->setPageStep(
-        type_safe::narrow_cast<int>( visibleColumns.get() * 7 / 8 ) );
+        klogg::narrow_cast<int>( visibleColumns.get() * 7 / 8 ) );
 }
 
 void AbstractLogView::drawTextArea( QPaintDevice* paintDevice )
@@ -2399,19 +2399,19 @@ void AbstractLogView::drawTextArea( QPaintDevice* paintDevice )
                 = QStringView{ logLine }.mid( match.startColumn().get(), match.size().get() );
             const auto expandedPrefixLength = untabify( prefix.toString() ).size();
             const LineLength startDelta
-                = LineLength{ type_safe::narrow_cast<LineLength::UnderlyingType>(
+                = LineLength{ klogg::narrow_cast<LineLength::UnderlyingType>(
                     expandedPrefixLength - prefix.size() ) };
 
             const LineLength expandedMatchLength = LineLength{
                 untabify( matchPart.toString(),
-                          LineColumn{ type_safe::narrow_cast<LineColumn::UnderlyingType>(
+                          LineColumn{ klogg::narrow_cast<LineColumn::UnderlyingType>(
                               expandedPrefixLength ) } )
                     .size()
             };
 
             const auto lengthDelta
                 = expandedMatchLength
-                  - LineLength{ type_safe::narrow_cast<LineLength::UnderlyingType>(
+                  - LineLength{ klogg::narrow_cast<LineLength::UnderlyingType>(
                       matchPart.size() ) };
 
             return HighlightedMatch{ match.startColumn() + startDelta, match.size() + lengthDelta,

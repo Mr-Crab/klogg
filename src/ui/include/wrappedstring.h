@@ -72,7 +72,7 @@ public:
     klogg::vector<WrappedStringPart> mid( LineColumn start, LineLength length ) const
     {
         auto getLength = []( const auto& view ) -> LineLength::UnderlyingType {
-            return type_safe::narrow_cast<LineLength::UnderlyingType>( view.size() );
+            return klogg::narrow_cast<LineLength::UnderlyingType>( view.size() );
         };
 
         klogg::vector<WrappedStringPart> resultChunks;

@@ -483,7 +483,7 @@ klogg::vector<QString> LogData::RawLines::decodeLines() const
             }
 
             auto decodedLine = textDecoder.decoder->toUnicode(
-                buffer.data() + lineStart, type_safe::narrow_cast<int>( length ) );
+                buffer.data() + lineStart, klogg::narrow_cast<int>( length ) );
 
             if ( !prefilterPattern.pattern().isEmpty() ) {
                 decodedLine.remove( prefilterPattern );

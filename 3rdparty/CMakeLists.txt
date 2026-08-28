@@ -5,7 +5,6 @@ include(CPM)
 set(_TMP_CPM_USE_LOCAL_PACKAGES ${CPM_USE_LOCAL_PACKAGES})
 
 cpmaddpackage("gh:simdutf/simdutf@8.0.0")
-cpmaddpackage("gh:foonathan/type_safe@0.2.4")
 cpmaddpackage("gh:RoaringBitmap/CRoaring@4.5.1")
 set(ROARING_BUILD_CPP ON CACHE BOOL "Build the C++ wrapper" FORCE)
 cpmaddpackage("gh:lemire/streamvbyte@2.0.0")
@@ -389,7 +388,6 @@ set(klogg_cpm_targets
     hs
     tbb
     exprtk
-    type_safe
     mimalloc-static
     sentry
     crashpad_client
