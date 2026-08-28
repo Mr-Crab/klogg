@@ -4,10 +4,10 @@ include(CPM)
 
 set(_TMP_CPM_USE_LOCAL_PACKAGES ${CPM_USE_LOCAL_PACKAGES})
 
-cpmaddpackage("gh:simdutf/simdutf@8.0.0")
-cpmaddpackage("gh:RoaringBitmap/CRoaring@4.5.1")
+cpmaddpackage("gh:simdutf/simdutf@9.1.0")
+cpmaddpackage("gh:RoaringBitmap/CRoaring@5.1.1")
 set(ROARING_BUILD_CPP ON CACHE BOOL "Build the C++ wrapper" FORCE)
-cpmaddpackage("gh:lemire/streamvbyte@2.0.0")
+cpmaddpackage("gh:lemire/streamvbyte@3.0.0")
 
 if(APPLE)
   cpmaddpackage(
@@ -16,7 +16,7 @@ if(APPLE)
     GITHUB_REPOSITORY
     arl/macdeployqtfix
     GIT_TAG
-    df888505849d3c06d20a4338af276dfa7d11826a
+    631361abd994640023c83b539735d8373744f9dd
     DOWNLOAD_ONLY
     YES
   )
@@ -58,7 +58,7 @@ elseif(KLOGG_USE_VECTORSCAN)
     GITHUB_REPOSITORY
     VectorCamp/vectorscan
     GIT_TAG
-    d29730e1cb9daaa66bda63426cdce83505d2c809
+    acd7363aadea43da9c5246542d9969db843dd132
     EXCLUDE_FROM_ALL
     YES
     OPTIONS
@@ -135,7 +135,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   martinus/robin-hood-hashing
   GIT_TAG
-  3.11.2
+  3.11.5
   EXCLUDE_FROM_ALL
   YES
 )
@@ -170,7 +170,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   KDAB/KDSingleApplication
   GIT_TAG
-  master
+  v1.2.1
   EXCLUDE_FROM_ALL
   YES
   OPTIONS
@@ -250,7 +250,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   KDABLabs/KDToolBox
   GIT_TAG
-  7ad582e4e0291ed8d20fb5568e7a088f97c89f3f
+  39ea6fae6b7edf4d7f31c3a4ee7202c619ce8392
   DOWNLOAD_ONLY
   YES
 )
@@ -272,7 +272,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   SpartanJ/efsw
   GIT_TAG
-  1.5.1
+  1.7.0
   EXCLUDE_FROM_ALL
   YES
   OPTIONS
@@ -291,7 +291,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   uxlfoundation/oneTBB
   VERSION
-  2022.3.0
+  2023.1.0
   EXCLUDE_FROM_ALL
   YES
   OPTIONS
@@ -311,7 +311,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   microsoft/mimalloc
   VERSION
-  3.2.8
+  3.5.0
   EXCLUDE_FROM_ALL
   YES
   OPTIONS
@@ -363,7 +363,7 @@ if(KLOGG_USE_SENTRY)
     GITHUB_REPOSITORY
     getsentry/sentry-native
     GIT_TAG
-    b549d9d471d4e1cd7b919333fcfe7c2886b567bd
+    0.16.4
     EXCLUDE_FROM_ALL
     YES
   )

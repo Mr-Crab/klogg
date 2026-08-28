@@ -42,6 +42,11 @@
 #include <QFileOpenEvent>
 #endif
 
+#ifdef Q_OS_WIN
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include "configuration.h"
 #include "crashhandler.h"
 #include "klogg_version.h"
