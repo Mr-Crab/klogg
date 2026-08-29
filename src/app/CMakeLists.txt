@@ -92,6 +92,14 @@ if(WIN32)
   target_sources(klogg_portable PRIVATE ${ProductVersionResourceFiles})
   target_sources(klogg_grep PRIVATE ${ProductVersionResourceFiles})
 
+  # Make sure the Visual Studio debugger finds the real Qt DLLs first, regardless of
+  # what else (e.g. Perforce P4V, which bundles its own Qt6) is ahead of them on PATH.
+  set_target_properties(
+    klogg klogg_portable klogg_grep
+    PROPERTIES VS_DEBUGGER_ENVIRONMENT
+               "PATH=$<TARGET_FILE_DIR:Qt${QT_VERSION_MAJOR}::Core>;%PATH%"
+  )
+
 elseif(APPLE)
   set_source_files_properties(${ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
   set_source_files_properties(${NOTICE_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION SharedSupport)
