@@ -5,6 +5,15 @@ include(CPM)
 set(_TMP_CPM_USE_LOCAL_PACKAGES ${CPM_USE_LOCAL_PACKAGES})
 
 cpmaddpackage("gh:simdutf/simdutf@9.1.0")
+if(TARGET simdutf)
+  # simdutf's own src/CMakeLists.txt hardcodes /WX /W3 /sdl for any MSVC-like
+  # compiler that isn't the old toolset 140. clang-cl also reports as MSVC and
+  # falls into that branch, but unlike real cl.exe it emits -Wunused-template
+  # for simdutf's per-backend scalar fallbacks, which then turns fatal under
+  # /WX. Silence it; this is appended after simdutf's own target_compile_options
+  # call so it wins the flag-ordering fight against its /W3.
+  target_compile_options(simdutf PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-unused-template>)
+endif()
 cpmaddpackage("gh:RoaringBitmap/CRoaring@5.1.1")
 set(ROARING_BUILD_CPP ON CACHE BOOL "Build the C++ wrapper" FORCE)
 cpmaddpackage("gh:lemire/streamvbyte@3.0.0")
