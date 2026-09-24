@@ -2,6 +2,15 @@ set(QAPPLICATION_CLASS QApplication)
 
 include(CPM)
 
+function(klogg_patch_dependency_file file_path old_text new_text)
+  file(READ "${file_path}" file_contents)
+  string(REPLACE "\r\n" "\n" file_contents "${file_contents}")
+  string(REPLACE "${old_text}" "${new_text}" patched_contents "${file_contents}")
+  if(NOT patched_contents STREQUAL file_contents)
+    file(WRITE "${file_path}" "${patched_contents}")
+  endif()
+endfunction()
+
 set(_TMP_CPM_USE_LOCAL_PACKAGES ${CPM_USE_LOCAL_PACKAGES})
 
 cpmaddpackage("gh:simdutf/simdutf@9.1.0")
@@ -16,7 +25,32 @@ if(TARGET simdutf)
 endif()
 cpmaddpackage("gh:RoaringBitmap/CRoaring@5.1.1")
 set(ROARING_BUILD_CPP ON CACHE BOOL "Build the C++ wrapper" FORCE)
-cpmaddpackage("gh:lemire/streamvbyte@3.0.0")
+cpmaddpackage(
+  NAME
+  streamvbyte
+  GITHUB_REPOSITORY
+  lemire/streamvbyte
+  VERSION
+  3.0.0
+)
+if(streamvbyte_ADDED)
+  klogg_patch_dependency_file(
+    "${streamvbyte_SOURCE_DIR}/src/streamvbyte_isadetection.h"
+    [=[#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+#define STREAMVBYTE_IS_ARM64 1
+#endif // defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+#if defined(_MSC_VER)]=]
+    [=[/*
+ * The ARM SIMD sources use GCC/Clang AArch64 intrinsics. MSVC ARM64 uses a
+ * different intrinsic surface, so keep its portable scalar implementation.
+ */
+#if defined(__aarch64__) && !defined(_MSC_VER)
+#define STREAMVBYTE_IS_ARM64 1
+#endif
+
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))]=]
+  )
+endif()
 
 if(APPLE)
   cpmaddpackage(
@@ -129,6 +163,28 @@ cpmaddpackage(
   EXCLUDE_FROM_ALL
   YES
 )
+if(KF5Archive_ADDED)
+  klogg_patch_dependency_file(
+    "${KF5Archive_SOURCE_DIR}/karchive/src/kar.cpp"
+    ".arg(mode)"
+    ".arg(static_cast<int>(mode))"
+  )
+  klogg_patch_dependency_file(
+    "${KF5Archive_SOURCE_DIR}/karchive/src/karchive.cpp"
+    ".arg(mode)"
+    ".arg(static_cast<int>(mode))"
+  )
+  klogg_patch_dependency_file(
+    "${KF5Archive_SOURCE_DIR}/karchive/src/karchive.cpp"
+    ".arg(d->mode)"
+    ".arg(static_cast<int>(d->mode))"
+  )
+  klogg_patch_dependency_file(
+    "${KF5Archive_SOURCE_DIR}/karchive/src/krcc.cpp"
+    ".arg(mode)"
+    ".arg(static_cast<int>(mode))"
+  )
+endif()
 if(NOT KF5Archive_ADDED)
   find_package(KF5Archive)
   add_library(klogg_karchive INTERFACE)

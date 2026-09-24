@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.12)
 
+# Some vendored third-party CMakeLists.txt (pulled in via CPM) still declare
+# cmake_minimum_required() below 3.5, which newer CMake (4.0+) rejects outright.
+# Floor it here so those legacy subprojects keep configuring; -D on the command
+# line still overrides this.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum CMake policy version")
+
 project(
   klogg
   VERSION 24.11.0
@@ -29,8 +35,17 @@ endif()
 
 if(WIN32)
   if(KLOGG_ARCH EQUAL 64)
-    option(KLOGG_USE_HYPERSCAN "Use Hyperscan" ON)
-    option(KLOGG_USE_VECTORSCAN "Use Vectorscan" OFF)
+    string(TOUPPER "${CMAKE_SYSTEM_PROCESSOR}" KLOGG_SYSTEM_PROCESSOR_UPPER)
+    if(KLOGG_SYSTEM_PROCESSOR_UPPER MATCHES "^ARM64")
+      # Hyperscan is x86 SIMD-only. The bundled Vectorscan revision has no
+      # MSVC ARM64 build support, so the Qt regex fallback is used on Windows
+      # ARM64 until that dependency is upgraded.
+      option(KLOGG_USE_HYPERSCAN "Use Hyperscan" OFF)
+      option(KLOGG_USE_VECTORSCAN "Use Vectorscan" OFF)
+    else()
+      option(KLOGG_USE_HYPERSCAN "Use Hyperscan" ON)
+      option(KLOGG_USE_VECTORSCAN "Use Vectorscan" OFF)
+    endif()
   else()
     option(KLOGG_USE_HYPERSCAN "Use Hyperscan" OFF)
     option(KLOGG_USE_VECTORSCAN "Use Vectorscan" OFF)
@@ -119,8 +134,12 @@ if(MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
   endif(CMAKE_C_FLAGS MATCHES "/W[0-4]")
 
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D __SSE4_1__=1 /D __SSE4_2__=1")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D __SSE4_1__=1 /D __SSE4_2__=1")
+  # These intrinsics are x86-only. Defining them for ARM64 also causes
+  # transitive dependencies to select headers which MSVC cannot use there.
+  if(NOT CMAKE_GENERATOR_PLATFORM MATCHES "^(ARM64|ARM64EC)$")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D __SSE4_1__=1 /D __SSE4_2__=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D __SSE4_1__=1 /D __SSE4_2__=1")
+  endif()
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj ")
 else()
