@@ -144,8 +144,50 @@ CMake should generate `klogg.sln` file in `<path_to_project_root>\build_root` di
 
 Binaries are placed into `build_root/output`.
 
-For https network urls support download precompiled openssl library https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1l-dev.zip.
-Put libcrypto-1_1 and libssl-1_1 for desired architecture near klogg binaries.
+Qt 6 packages its Windows TLS implementations as plugins under `plugins/tls`. The packaging
+script includes the Schannel and OpenSSL backends in the release directory. Schannel uses the
+Windows TLS implementation and does not require OpenSSL DLLs. If the Qt package is configured to
+use OpenSSL, install matching runtime DLLs; Qt 6.7 uses OpenSSL 3, while older Qt 5 builds use
+OpenSSL 1.1.
+
+### Creating Windows packages
+
+Build a relocatable configuration from an x64 or x86 Native Tools Command Prompt:
+
+```
+set KLOGG_BUILD_ROOT=build-release
+set KLOGG_VERSION=24.11.0.1
+set KLOGG_ARCH=x64
+set KLOGG_QT=Qt6
+set KLOGG_QT_DIR=E:\software\QT\6.7.3\msvc2022_64
+
+cmake -S . -B %KLOGG_BUILD_ROOT% -G Ninja ^
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo ^
+  -DCMAKE_PREFIX_PATH=%KLOGG_QT_DIR% ^
+  -DBUILD_VERSION=%KLOGG_VERSION% ^
+  -DKLOGG_GENERIC_CPU=ON ^
+  -DKLOGG_USE_SENTRY=ON
+cmake --build %KLOGG_BUILD_ROOT% --target ci_build
+```
+
+The Windows packaging script locates the application, TBB and compiler runtime files through the
+configured build directory. It does not depend on the MSVC compiler version or the current working
+directory. Run it from any directory:
+
+```
+packaging\windows\prepare_release.cmd
+```
+
+Install NSIS, then generate the installer from the repository root:
+
+```
+makensis -DVERSION=%KLOGG_VERSION% -DPLATFORM=%KLOGG_ARCH% -DQT_MAJOR=%KLOGG_QT% klogg.nsi
+```
+
+The installer is written to
+`klogg-%KLOGG_VERSION%-%KLOGG_ARCH%-%KLOGG_QT%-setup.exe`. Portable and PDB archives are written to
+the repository root. OpenSSL is optional at packaging time; set `SSL_DIR` and `SSL_ARCH` before
+running `prepare_release.cmd` to include an OpenSSL runtime.
 
 ### Building on Mac OS
 

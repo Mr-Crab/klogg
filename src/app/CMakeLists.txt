@@ -135,6 +135,21 @@ if(WIN32)
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       COMMENT "Copy tbb"
     )
+    if(MSVC)
+      # Keep release packaging independent of the compiler-version-specific
+      # directory selected by oneTBB.
+      add_custom_command(
+        TARGET klogg
+        POST_BUILD
+        COMMAND
+          ${CMAKE_COMMAND}
+          "-DSOURCE=$<TARGET_PDB_FILE:tbb>"
+          "-DDESTINATION=$<TARGET_FILE_DIR:klogg>"
+          -P "${CMAKE_SOURCE_DIR}/cmake/CopyFileIfExists.cmake"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Copy tbb debug symbols"
+      )
+    endif()
   endif()
   if(TARGET tbbmalloc_proxy)
     add_custom_command(

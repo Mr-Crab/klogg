@@ -25,7 +25,7 @@ XpStyle on
 SetCompressor /SOLID lzma
 
 ; Registry key to keep track of the directory we are installed in
-!ifdef ARCH32
+!if ${PLATFORM} == "x86"
   InstallDir "$PROGRAMFILES\klogg"
 !else
   InstallDir "$PROGRAMFILES64\klogg"
@@ -71,9 +71,13 @@ Section "klogg" klogg
 
     SetOutPath $INSTDIR
     File release\klogg.exe
-    File release\klogg_crashpad_handler.exe
-    File release\klogg_minidump_dump.exe
     File release\tbb12.dll
+    !if /FileExists "release\klogg_crashpad_handler.exe"
+        !if /FileExists "release\klogg_minidump_dump.exe"
+            File release\klogg_crashpad_handler.exe
+            File release\klogg_minidump_dump.exe
+        !endif
+    !endif
 
     File COPYING
     File NOTICE
@@ -125,6 +129,8 @@ Section "Qt Runtime libraries" qtlibs
     SetOutPath $INSTDIR\styles
 !if ${QT_MAJOR} == "Qt6"
     File release\styles\qmodernwindowsstyle.dll
+    SetOutPath $INSTDIR\tls
+    File release\tls\*backend.dll
 !else
     File release\styles\qwindowsvistastyle.dll
 !endif
@@ -140,11 +146,15 @@ Section "MSVC Runtime libraries" vcruntime
 !if ${PLATFORM} == "x64"
     File release\vcruntime140_1.dll
 
-    File release\libcrypto-1_1-x64.dll
-    File release\libssl-1_1-x64.dll
+    !if /FileExists "release\libcrypto-1_1-x64.dll"
+        File release\libcrypto-1_1-x64.dll
+        File release\libssl-1_1-x64.dll
+    !endif
 !else
-    File release\libcrypto-1_1.dll
-    File release\libssl-1_1.dll
+    !if /FileExists "release\libcrypto-1_1.dll"
+        File release\libcrypto-1_1.dll
+        File release\libssl-1_1.dll
+    !endif
 !endif
 
 SectionEnd
@@ -201,6 +211,11 @@ Section "Uninstall"
     Delete "$INSTDIR\platforms\qwindows.dll"
     Delete "$INSTDIR\platforms\qminimal.dll"
     Delete "$INSTDIR\styles\qwindowsvistastyle.dll"
+    Delete "$INSTDIR\styles\qmodernwindowsstyle.dll"
+    Delete "$INSTDIR\tls\*.dll"
+    RMDir "$INSTDIR\tls"
+    RMDir "$INSTDIR\styles"
+    RMDir "$INSTDIR\platforms"
     Delete "$INSTDIR\msvcp140.dll"
     Delete "$INSTDIR\msvcp140_1.dll"
     Delete "$INSTDIR\vcruntime140.dll"
