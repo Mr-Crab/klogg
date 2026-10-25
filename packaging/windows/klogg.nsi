@@ -10,7 +10,7 @@
 !endif
 
 !ifndef QT_MAJOR
-    !define QT_MAJOR 'Qt5'
+    !define QT_MAJOR 'Qt6'
 !endif
 
 # Headers
@@ -142,19 +142,22 @@ Section "MSVC Runtime libraries" vcruntime
     File release\msvcp140.dll
     File release\msvcp140_1.dll
     File release\vcruntime140.dll
-    
-!if ${PLATFORM} == "x64"
-    File release\vcruntime140_1.dll
 
-    !if /FileExists "release\libcrypto-1_1-x64.dll"
-        File release\libcrypto-1_1-x64.dll
-        File release\libssl-1_1-x64.dll
-    !endif
-!else
-    !if /FileExists "release\libcrypto-1_1.dll"
-        File release\libcrypto-1_1.dll
-        File release\libssl-1_1.dll
-    !endif
+!if /FileExists "release\vcruntime140_1.dll"
+    File release\vcruntime140_1.dll
+!endif
+
+!if /FileExists "release\libcrypto-1_1-x64.dll"
+    File release\libcrypto-1_1-x64.dll
+    File release\libssl-1_1-x64.dll
+!endif
+!if /FileExists "release\libcrypto-1_1-arm64.dll"
+    File release\libcrypto-1_1-arm64.dll
+    File release\libssl-1_1-arm64.dll
+!endif
+!if /FileExists "release\libcrypto-1_1.dll"
+    File release\libcrypto-1_1.dll
+    File release\libssl-1_1.dll
 !endif
 
 SectionEnd
@@ -227,6 +230,8 @@ Section "Uninstall"
     Delete "$INSTDIR\klogg_tbbmalloc_proxy.dll"
     Delete "$INSTDIR\libcrypto-1_1-x64.dll"
     Delete "$INSTDIR\libssl-1_1-x64.dll"
+    Delete "$INSTDIR\libcrypto-1_1-arm64.dll"
+    Delete "$INSTDIR\libssl-1_1-arm64.dll"
     Delete "$INSTDIR\libcrypto-1_1.dll"
     Delete "$INSTDIR\libssl-1_1.dll"
     Delete "$INSTDIR\mimalloc.dll"

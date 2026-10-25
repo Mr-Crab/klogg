@@ -262,7 +262,9 @@ if(KLOGG_USE_SENTRY)
       COMMENT "Copy crash_handler"
     )
 
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    if(KLOGG_TARGET_ARM64)
+      message(STATUS "minidump_dump is not available for Windows ARM64")
+    elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
       add_custom_command(
         TARGET klogg
         POST_BUILD

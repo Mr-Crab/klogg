@@ -36,10 +36,9 @@ runs:
         packaging\windows\prepare_release.cmd
 
     - name: Win installer
-      uses: joncloud/makensis-action@v3.3
-      with:
-        script-file: klogg.nsi
-        arguments: "-DVERSION=%KLOGG_VERSION% -DPLATFORM=%KLOGG_ARCH% -DQT_MAJOR=%KLOGG_QT%" 
+      shell: cmd
+      run: |
+        makensis -DVERSION=%KLOGG_VERSION% -DPLATFORM=%KLOGG_ARCH% -DQT_MAJOR=%KLOGG_QT% klogg.nsi || exit /b 1
     
     - name: Win package
       shell: cmd

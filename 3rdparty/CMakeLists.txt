@@ -211,7 +211,9 @@ if(NOT TARGET robin_hood)
 endif(NOT TARGET robin_hood)
 
 if(KLOGG_BUILD_TESTS)
-  cpmaddpackage("gh:bombela/backward-cpp@1.6")
+  if(NOT (WIN32 AND KLOGG_TARGET_ARM64))
+    cpmaddpackage("gh:bombela/backward-cpp@1.6")
+  endif()
   cpmaddpackage(
     NAME
     Catch2

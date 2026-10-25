@@ -78,6 +78,9 @@ set "QT_PLATFORM_DLL=%QTDIR%\plugins\platforms\qwindows.dll"
 if /I "%KLOGG_ARCH%"=="x64" (
   set "VCRT_ARCH=x64"
   set "DEFAULT_SSL_ARCH=-x64"
+) else if /I "%KLOGG_ARCH%"=="arm64" (
+  set "VCRT_ARCH=arm64"
+  set "DEFAULT_SSL_ARCH=-arm64"
 ) else (
   set "VCRT_ARCH=x86"
   set "DEFAULT_SSL_ARCH="
@@ -103,9 +106,13 @@ if not defined VCToolsRedistDir (
 
 :vc_runtime_ready
 if not "%VCToolsRedistDir:~-1%"=="\" set "VCToolsRedistDir=%VCToolsRedistDir%\"
-set "VCRT_DIR=%VCToolsRedistDir%%VCRT_ARCH%\Microsoft.VC143.CRT"
-if not exist "%VCRT_DIR%" (
-  echo [ERROR] Visual C++ runtime directory does not exist: "%VCRT_DIR%"
+set "VCRT_DIR="
+for /f "delims=" %%D in ('dir /b /ad /o-n "%VCToolsRedistDir%%VCRT_ARCH%\Microsoft.VC*.CRT" 2^>nul') do (
+  if not defined VCRT_DIR set "VCRT_DIR=%VCToolsRedistDir%%VCRT_ARCH%\%%D"
+)
+if not defined VCRT_DIR (
+  echo [ERROR] Visual C++ runtime directory could not be found under:
+  echo         "%VCToolsRedistDir%%VCRT_ARCH%"
   goto :fail
 )
 
