@@ -18,11 +18,7 @@ set(TS_FILES
 )
 
 find_package(Qt${QT_VERSION_MAJOR}LinguistTools REQUIRED)
-if (${QT_VERSION_MAJOR} EQUAL 5)
-  qt5_add_translation(QM_FILES ${TS_FILES})
-else (${QT_VERSION_MAJOR} EQUAL 6)
-  qt6_add_translation(QM_FILES ${TS_FILES})
-endif()
+qt6_add_translation(QM_FILES ${TS_FILES})
 
 if (NOT TARGET Qt${QT_VERSION_MAJOR}::lupdate)
     message(FATAL_ERROR "The package \"Qt${QT_VERSION_MAJOR}LinguistTools\" is required.")
@@ -96,6 +92,14 @@ if(WIN32)
   target_sources(klogg_portable PRIVATE ${ProductVersionResourceFiles})
   target_sources(klogg_grep PRIVATE ${ProductVersionResourceFiles})
 
+  # Make sure the Visual Studio debugger finds the real Qt DLLs first, regardless of
+  # what else (e.g. Perforce P4V, which bundles its own Qt6) is ahead of them on PATH.
+  set_target_properties(
+    klogg klogg_portable klogg_grep
+    PROPERTIES VS_DEBUGGER_ENVIRONMENT
+               "PATH=$<TARGET_FILE_DIR:Qt${QT_VERSION_MAJOR}::Core>;%PATH%"
+  )
+
 elseif(APPLE)
   set_source_files_properties(${ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
   set_source_files_properties(${NOTICE_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION SharedSupport)
@@ -131,6 +135,21 @@ if(WIN32)
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       COMMENT "Copy tbb"
     )
+    if(MSVC)
+      # Keep release packaging independent of the compiler-version-specific
+      # directory selected by oneTBB.
+      add_custom_command(
+        TARGET klogg
+        POST_BUILD
+        COMMAND
+          ${CMAKE_COMMAND}
+          "-DSOURCE=$<TARGET_PDB_FILE:tbb>"
+          "-DDESTINATION=$<TARGET_FILE_DIR:klogg>"
+          -P "${CMAKE_SOURCE_DIR}/cmake/CopyFileIfExists.cmake"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Copy tbb debug symbols"
+      )
+    endif()
   endif()
   if(TARGET tbbmalloc_proxy)
     add_custom_command(
@@ -243,7 +262,9 @@ if(KLOGG_USE_SENTRY)
       COMMENT "Copy crash_handler"
     )
 
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    if(KLOGG_TARGET_ARM64)
+      message(STATUS "minidump_dump is not available for Windows ARM64")
+    elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
       add_custom_command(
         TARGET klogg
         POST_BUILD

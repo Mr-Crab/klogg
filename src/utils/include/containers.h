@@ -20,10 +20,11 @@
 #ifndef KLOGG_CONTAINERS_H
 #define KLOGG_CONTAINERS_H
 
+#include <concepts>
 #include <mimalloc.h>
 #include <vector>
 
-#include <type_safe/narrow_cast.hpp>
+#include <qglobal.h>
 #include <type_traits>
 
 namespace klogg {
@@ -38,10 +39,18 @@ constexpr auto ssize( const C& c )
     return static_cast<R>( c.size() );
 }
 
+template <std::integral To, std::integral From>
+constexpr To narrow_cast( From value ) noexcept
+{
+    const auto result = static_cast<To>( value );
+    Q_ASSERT( static_cast<From>( result ) == value );
+    return result;
+}
+
 template <class C>
 constexpr int isize( const C& c )
 {
-    return type_safe::narrow_cast<int>( ssize( c ) );
+    return narrow_cast<int>( klogg::ssize( c ) );
 }
 
 

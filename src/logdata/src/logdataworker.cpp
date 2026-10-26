@@ -364,7 +364,7 @@ std::string_view::size_type findNextSingleByteDelimeter( EncodingParameters, std
 int charOffsetWithinBlock( const char* blockStart, const char* pointer,
                            const EncodingParameters& encodingParams )
 {
-    return type_safe::narrow_cast<int>( std::distance( blockStart, pointer ) )
+    return klogg::narrow_cast<int>( std::distance( blockStart, pointer ) )
            - encodingParams.getBeforeCrOffset();
 }
 
@@ -450,7 +450,7 @@ FastLinePositionArray IndexOperation::parseDataBlock( OffsetInFile::UnderlyingTy
             break;
         }
 
-        auto posWithinBlock = type_safe::narrow_cast<int>(
+        auto posWithinBlock = klogg::narrow_cast<int>(
             state.pos >= blockBeginning ? ( state.pos - blockBeginning ) : 0 );
 
         isEndOfBlock = posWithinBlock == klogg::ssize( block );
@@ -463,7 +463,7 @@ FastLinePositionArray IndexOperation::parseDataBlock( OffsetInFile::UnderlyingTy
         const auto currentDataEnd = posWithinBlock + blockBeginning;
 
         const auto length
-            = type_safe::narrow_cast<LineLength::UnderlyingType>( currentDataEnd - state.pos )
+            = klogg::narrow_cast<LineLength::UnderlyingType>( currentDataEnd - state.pos )
                   / state.encodingParams.lineFeedWidth
               + state.additional_spaces;
 
@@ -586,7 +586,7 @@ void IndexOperation::indexNextBlock( IndexingState& state, const BlockData& bloc
         }
 
         scopedAccessor.addAll(
-            block, LineLength( type_safe::narrow_cast<LineLength::UnderlyingType>( maxLength ) ),
+            block, LineLength( klogg::narrow_cast<LineLength::UnderlyingType>( maxLength ) ),
             linePositions, state.encodingGuess );
 
         // Update the caller for progress indication

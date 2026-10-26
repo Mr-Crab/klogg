@@ -22,7 +22,6 @@
 #include <cstdint>
 
 #include "linetypes.h"
-#include <type_safe/strong_typedef.hpp>
 
 // This class is a compressed storage backend for LinePositionArray
 // It emulates the interface of a vector, but take advantage of the nature

@@ -20,7 +20,7 @@ To build Klogg:
 
 - cmake 3.12 or later to generate build files
 - C++ compiler with decent C++17 support (at least gcc 7.5, clang 7, msvc 19.14)
-- Qt libraries 5.9 or later (CI builds use Qt 5.9.5/5.12.5/5.15.2):
+- Qt libraries 5.9 or later. The current CI release builds use Qt 6:
   - QtCore
   - QtGui
   - QtWidgets
@@ -144,8 +144,54 @@ CMake should generate `klogg.sln` file in `<path_to_project_root>\build_root` di
 
 Binaries are placed into `build_root/output`.
 
-For https network urls support download precompiled openssl library https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1l-dev.zip.
-Put libcrypto-1_1 and libssl-1_1 for desired architecture near klogg binaries.
+Qt 6 packages its Windows TLS implementations as plugins under `plugins/tls`. The packaging
+script includes the Schannel and OpenSSL backends in the release directory. Schannel uses the
+Windows TLS implementation and does not require OpenSSL DLLs. If the Qt package is configured to
+use OpenSSL, install matching runtime DLLs; Qt 6.7 uses OpenSSL 3, while older Qt 5 builds use
+OpenSSL 1.1.
+
+### Creating Windows packages
+
+Build a relocatable configuration from an x64 or ARM64 Native Tools Command Prompt:
+
+```
+set KLOGG_BUILD_ROOT=build-release
+set KLOGG_VERSION=24.12.0.1
+set KLOGG_ARCH=x64
+set KLOGG_QT=Qt6
+set KLOGG_QT_DIR=E:\software\QT\6.7.3\msvc2022_64
+
+cmake -S . -B %KLOGG_BUILD_ROOT% -G Ninja ^
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo ^
+  -DCMAKE_PREFIX_PATH=%KLOGG_QT_DIR% ^
+  -DBUILD_VERSION=%KLOGG_VERSION% ^
+  -DKLOGG_GENERIC_CPU=ON ^
+  -DKLOGG_USE_SENTRY=ON
+cmake --build %KLOGG_BUILD_ROOT% --target ci_build
+```
+
+The Windows packaging script locates the application, TBB and compiler runtime files through the
+configured build directory. It does not depend on the MSVC compiler version or the current working
+directory. Run it from any directory:
+
+```
+packaging\windows\prepare_release.cmd
+```
+
+Install NSIS, then generate the installer from the repository root:
+
+```
+makensis -DVERSION=%KLOGG_VERSION% -DPLATFORM=%KLOGG_ARCH% -DQT_MAJOR=%KLOGG_QT% klogg.nsi
+```
+
+The installer is written to
+`klogg-%KLOGG_VERSION%-%KLOGG_ARCH%-%KLOGG_QT%-setup.exe`. Portable and PDB archives are written to
+the repository root. OpenSSL is optional at packaging time; set `SSL_DIR` and `SSL_ARCH` before
+running `prepare_release.cmd` to include an OpenSSL runtime.
+
+For a Windows ARM64 package, use Qt's `msvc2022_arm64` build, set `KLOGG_ARCH=arm64`, and configure
+with `-DCMAKE_SYSTEM_PROCESSOR=ARM64`, `-DKLOGG_USE_HYPERSCAN=OFF`, and
+`-DKLOGG_USE_VECTORSCAN=OFF`. Crash reporting is currently disabled in the ARM64 CI package.
 
 ### Building on Mac OS
 

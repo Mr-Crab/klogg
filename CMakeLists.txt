@@ -1,11 +1,38 @@
 cmake_minimum_required(VERSION 3.12)
 
+# Some vendored third-party CMakeLists.txt (pulled in via CPM) still declare
+# cmake_minimum_required() below 3.5, which newer CMake (4.0+) rejects outright.
+# Floor it here so those legacy subprojects keep configuring; -D on the command
+# line still overrides this.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum CMake policy version")
+
 project(
   klogg
-  VERSION 24.11.0
+  VERSION 24.12.0
   DESCRIPTION "klogg log viewer"
   LANGUAGES C CXX ASM
 )
+
+string(TOUPPER "${CMAKE_GENERATOR_PLATFORM}" KLOGG_GENERATOR_PLATFORM_UPPER)
+string(TOUPPER "${CMAKE_SYSTEM_PROCESSOR}" KLOGG_SYSTEM_PROCESSOR_UPPER)
+if(KLOGG_GENERATOR_PLATFORM_UPPER MATCHES "^(ARM|ARM64|ARM64EC|AARCH64)$")
+  set(KLOGG_TARGET_ARCH "${CMAKE_GENERATOR_PLATFORM}")
+elseif(KLOGG_SYSTEM_PROCESSOR_UPPER MATCHES "^(ARM|ARM64|ARM64EC|AARCH64)$")
+  set(KLOGG_TARGET_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+elseif(CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
+  set(KLOGG_TARGET_ARCH "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}")
+elseif(CMAKE_GENERATOR_PLATFORM)
+  set(KLOGG_TARGET_ARCH "${CMAKE_GENERATOR_PLATFORM}")
+else()
+  set(KLOGG_TARGET_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+string(TOUPPER "${KLOGG_TARGET_ARCH}" KLOGG_TARGET_ARCH_UPPER)
+if(KLOGG_TARGET_ARCH_UPPER MATCHES "^(ARM|ARM64|ARM64EC|AARCH64)$")
+  set(KLOGG_TARGET_ARM_FAMILY TRUE)
+endif()
+if(KLOGG_TARGET_ARCH_UPPER MATCHES "^(ARM64|ARM64EC|AARCH64)$")
+  set(KLOGG_TARGET_ARM64 TRUE)
+endif()
 
 set(PROJECT_HOMEPAGE_URL "https://github.com/variar/klogg")
 
@@ -29,8 +56,16 @@ endif()
 
 if(WIN32)
   if(KLOGG_ARCH EQUAL 64)
-    option(KLOGG_USE_HYPERSCAN "Use Hyperscan" ON)
-    option(KLOGG_USE_VECTORSCAN "Use Vectorscan" OFF)
+    if(KLOGG_TARGET_ARM_FAMILY)
+      # Hyperscan is x86 SIMD-only. The bundled Vectorscan revision has no
+      # MSVC ARM64 build support, so the Qt regex fallback is used on Windows
+      # ARM64 until that dependency is upgraded.
+      option(KLOGG_USE_HYPERSCAN "Use Hyperscan" OFF)
+      option(KLOGG_USE_VECTORSCAN "Use Vectorscan" OFF)
+    else()
+      option(KLOGG_USE_HYPERSCAN "Use Hyperscan" ON)
+      option(KLOGG_USE_VECTORSCAN "Use Vectorscan" OFF)
+    endif()
   else()
     option(KLOGG_USE_HYPERSCAN "Use Hyperscan" OFF)
     option(KLOGG_USE_VECTORSCAN "Use Vectorscan" OFF)
@@ -72,7 +107,7 @@ if(NOT
   set(ICON_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Resources/${ICON_NAME})
 endif()
 
-if(MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.14)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.14)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /experimental:external /external:W0 ")
   set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "/external:I ")
 endif()
@@ -119,8 +154,12 @@ if(MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
   endif(CMAKE_C_FLAGS MATCHES "/W[0-4]")
 
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D __SSE4_1__=1 /D __SSE4_2__=1")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D __SSE4_1__=1 /D __SSE4_2__=1")
+  # These intrinsics are x86-only. Defining them for ARM64 also causes
+  # transitive dependencies to select headers which MSVC cannot use there.
+  if(NOT KLOGG_TARGET_ARM_FAMILY)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D __SSE4_1__=1 /D __SSE4_2__=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D __SSE4_1__=1 /D __SSE4_2__=1")
+  endif()
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj ")
 else()
@@ -183,7 +222,6 @@ find_package(
   QT
   NAMES
   Qt6
-  Qt5
   COMPONENTS Core
              Widgets
              Concurrent

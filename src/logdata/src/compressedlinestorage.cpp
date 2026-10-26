@@ -80,7 +80,7 @@ void CompressedLinePositionStorage::append( OffsetInFile pos )
 
     currentLinesBlock_.push_back( pos );
     currentLinesBlockShifted_.push_back(
-        type_safe::narrow_cast<uint32_t>( pos.get() - currentLinesBlock_.front().get() ) );
+        klogg::narrow_cast<uint32_t>( pos.get() - currentLinesBlock_.front().get() ) );
 
     if ( currentLinesBlock_.size() == SimdIndexBlockSize ) {
         compress_current_block();

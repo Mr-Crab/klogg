@@ -19,15 +19,14 @@
 
 #pragma once
 #include <algorithm>
+#include <compare>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <optional>
 #include <qglobal.h>
 #include <string_view>
-
-#include <type_safe/narrow_cast.hpp>
-#include <type_safe/strong_typedef.hpp>
 
 #include <QMetaType>
 #include <QString>
@@ -36,51 +35,126 @@
 #include "containers.h"
 #include "log.h"
 
-template <typename StrongType>
-constexpr StrongType maxValue()
+template <typename S>
+constexpr S maxValue()
 {
-    return StrongType( std::numeric_limits<typename StrongType::UnderlyingType>::max() );
+    return S( std::numeric_limits<typename S::UnderlyingType>::max() );
 }
 
-// Qt file reading api has qint64 type offsets
-struct OffsetInFile : type_safe::strong_typedef<OffsetInFile, int64_t>,
-                      type_safe::strong_typedef_op::addition<OffsetInFile>,
-                      type_safe::strong_typedef_op::subtraction<OffsetInFile>,
-                      type_safe::strong_typedef_op::increment<OffsetInFile>,
-                      type_safe::strong_typedef_op::relational_comparison<OffsetInFile>,
-                      type_safe::strong_typedef_op::equality_comparison<OffsetInFile> {
-    using strong_typedef::strong_typedef;
+// Lightweight strong-typedef base: stores the underlying value and gives
+// derived types default comparison (==, !=, <, <=, >, >=) via operator<=>.
+template <typename Derived, std::integral T>
+class StrongType {
+public:
+    using UnderlyingType = T;
 
-    using UnderlyingType = int64_t;
+    constexpr StrongType() = default;
+    constexpr explicit StrongType( T value )
+        : value_{ value }
+    {
+    }
+
+    constexpr auto operator<=>( const StrongType& ) const = default;
+
+    constexpr T raw() const noexcept
+    {
+        return value_;
+    }
+
+protected:
+    T value_{};
+};
+
+// Opt-in operator mixins, mirroring the exact operator set each strong type had before.
+// These only go through the public raw()/constructor, since they are friends of the
+// mixin itself, not of StrongType, and cannot touch its protected value_.
+template <typename Derived>
+struct Incrementable {
+    friend Derived& operator++( Derived& d )
+    {
+        d = Derived( d.raw() + 1 );
+        return d;
+    }
+    friend Derived operator++( Derived& d, int )
+    {
+        Derived tmp{ d };
+        ++d;
+        return tmp;
+    }
+};
+
+template <typename Derived>
+struct Decrementable {
+    friend Derived& operator--( Derived& d )
+    {
+        d = Derived( d.raw() - 1 );
+        return d;
+    }
+    friend Derived operator--( Derived& d, int )
+    {
+        Derived tmp{ d };
+        --d;
+        return tmp;
+    }
+};
+
+template <typename Derived>
+struct Addable {
+    friend Derived operator+( Derived a, const Derived& b )
+    {
+        return Derived( a.raw() + b.raw() );
+    }
+    friend Derived& operator+=( Derived& a, const Derived& b )
+    {
+        a = Derived( a.raw() + b.raw() );
+        return a;
+    }
+};
+
+template <typename Derived>
+struct Subtractable {
+    friend Derived operator-( Derived a, const Derived& b )
+    {
+        return Derived( a.raw() - b.raw() );
+    }
+    friend Derived& operator-=( Derived& a, const Derived& b )
+    {
+        a = Derived( a.raw() - b.raw() );
+        return a;
+    }
+};
+
+// Qt file reading api has qint64 type offsets
+struct OffsetInFile : StrongType<OffsetInFile, int64_t>,
+                      Addable<OffsetInFile>,
+                      Subtractable<OffsetInFile>,
+                      Incrementable<OffsetInFile> {
+    using StrongType::StrongType;
 
     template <typename T = UnderlyingType>
     constexpr T get() const
     {
-        const auto underlyingValue = type_safe::get( *this );
+        const auto underlyingValue = raw();
 
         if constexpr ( std::is_same_v<T, UnderlyingType> ) {
             return underlyingValue;
         }
         else if constexpr ( std::is_unsigned_v<T> ) {
             Q_ASSERT( underlyingValue >= 0 );
-            return type_safe::narrow_cast<T>( static_cast<uint64_t>( underlyingValue ) );
+            return klogg::narrow_cast<T>( static_cast<uint64_t>( underlyingValue ) );
         }
         else {
-            return type_safe::narrow_cast<T>( underlyingValue );
+            return klogg::narrow_cast<T>( underlyingValue );
         }
     }
 };
 
-struct LinesCount : type_safe::strong_typedef<LinesCount, uint64_t>,
-                    type_safe::strong_typedef_op::addition<LinesCount>,
-                    type_safe::strong_typedef_op::subtraction<LinesCount>,
-                    type_safe::strong_typedef_op::increment<LinesCount>,
-                    type_safe::strong_typedef_op::decrement<LinesCount>,
-                    type_safe::strong_typedef_op::relational_comparison<LinesCount>,
-                    type_safe::strong_typedef_op::equality_comparison<LinesCount> {
-    using strong_typedef::strong_typedef;
-
-    using UnderlyingType = uint64_t;
+struct LinesCount : StrongType<LinesCount, uint64_t>,
+                    Addable<LinesCount>,
+                    Subtractable<LinesCount>,
+                    Incrementable<LinesCount>,
+                    Decrementable<LinesCount> {
+    using StrongType::StrongType;
 
     template <typename T = UnderlyingType>
     constexpr T get() const
@@ -89,45 +163,37 @@ struct LinesCount : type_safe::strong_typedef<LinesCount, uint64_t>,
                        "T should be the same sign as UnderlyingType" );
 
         if constexpr ( std::is_same_v<T, UnderlyingType> ) {
-            return type_safe::get( *this );
+            return raw();
         }
         else {
-            return type_safe::narrow_cast<T>( type_safe::get( *this ) );
+            return klogg::narrow_cast<T>( raw() );
         }
     }
 };
 Q_DECLARE_METATYPE( LinesCount )
 
-struct LineNumber : type_safe::strong_typedef<LineNumber, uint64_t>,
-                    type_safe::strong_typedef_op::increment<LineNumber>,
-                    type_safe::strong_typedef_op::decrement<LineNumber>,
-                    type_safe::strong_typedef_op::relational_comparison<LineNumber>,
-                    type_safe::strong_typedef_op::equality_comparison<LineNumber> {
-    using strong_typedef::strong_typedef;
-
-    using UnderlyingType = uint64_t;
+struct LineNumber : StrongType<LineNumber, uint64_t>,
+                    Incrementable<LineNumber>,
+                    Decrementable<LineNumber> {
+    using StrongType::StrongType;
 
     template <typename T = UnderlyingType>
     constexpr T get() const
     {
         if constexpr ( std::is_same_v<T, UnderlyingType> ) {
-            return type_safe::get( *this );
+            return raw();
         }
         else {
-            return type_safe::narrow_cast<T>( type_safe::get( *this ) );
+            return klogg::narrow_cast<T>( raw() );
         }
     }
 };
 Q_DECLARE_METATYPE( LineNumber )
 
-struct LineLength : type_safe::strong_typedef<LineLength, decltype( QString{}.size() )>,
-                    type_safe::strong_typedef_op::addition<LineLength>,
-                    type_safe::strong_typedef_op::subtraction<LineLength>,
-                    type_safe::strong_typedef_op::relational_comparison<LineLength>,
-                    type_safe::strong_typedef_op::equality_comparison<LineLength> {
-    using strong_typedef::strong_typedef;
-
-    using UnderlyingType = decltype( QString{}.size() );
+struct LineLength : StrongType<LineLength, decltype( QString{}.size() )>,
+                    Addable<LineLength>,
+                    Subtractable<LineLength> {
+    using StrongType::StrongType;
 
     template <typename T = UnderlyingType>
     constexpr T get() const
@@ -136,41 +202,38 @@ struct LineLength : type_safe::strong_typedef<LineLength, decltype( QString{}.si
                        "T should be the same sign as UnderlyingType" );
 
         if constexpr ( std::is_same_v<T, UnderlyingType> ) {
-            return type_safe::get( *this );
+            return raw();
         }
         else {
-            return type_safe::narrow_cast<T>( type_safe::get( *this ) );
+            return klogg::narrow_cast<T>( raw() );
         }
     }
 };
 Q_DECLARE_METATYPE( LineLength )
 
-struct LineColumn : type_safe::strong_typedef<LineColumn, decltype( QString{}.size() )>,
-                    type_safe::strong_typedef_op::increment<LineColumn>,
-                    type_safe::strong_typedef_op::relational_comparison<LineColumn>,
-                    type_safe::strong_typedef_op::equality_comparison<LineColumn> {
-    using strong_typedef::strong_typedef;
-
-    using UnderlyingType = decltype( QString{}.size() );
+struct LineColumn : StrongType<LineColumn, decltype( QString{}.size() )>,
+                    Incrementable<LineColumn> {
+    using StrongType::StrongType;
 
     template <typename T = UnderlyingType>
     constexpr T get() const
     {
         if constexpr ( std::is_same_v<T, UnderlyingType> ) {
-            return type_safe::get( *this );
+            return raw();
         }
         else if constexpr ( std::is_same_v<T, size_t> ) {
-            Q_ASSERT( type_safe::get( *this ) >= 0 );
-            return static_cast<T>( type_safe::get( *this ) );
+            Q_ASSERT( raw() >= 0 );
+            return static_cast<T>( raw() );
         }
         else {
             static_assert( std::is_signed_v<T> == std::is_signed_v<UnderlyingType>,
                            "T should be the same sign as UnderlyingType" );
-            return type_safe::narrow_cast<T>( type_safe::get( *this ) );
+            return klogg::narrow_cast<T>( raw() );
         }
     }
 };
 Q_DECLARE_METATYPE( LineColumn )
+
 
 inline constexpr OffsetInFile operator"" _offset( unsigned long long int value )
 {
@@ -257,11 +320,11 @@ inline bool operator>=( const LineNumber& number, const LinesCount& count )
 
 using OptionalLineNumber = std::optional<LineNumber>;
 
-template <typename Tag, typename T>
-QDebug operator<<( QDebug dbg, type_safe::strong_typedef<Tag, T> const& object )
+template <typename Derived, typename T>
+QDebug operator<<( QDebug dbg, const StrongType<Derived, T>& object )
 {
     QDebugStateSaver saver( dbg );
-    dbg << type_safe::get( object );
+    dbg << object.raw();
 
     return dbg;
 }
@@ -311,12 +374,12 @@ inline QString untabify( QString&& line, LineColumn initialPosition = 0_lcol )
     line.replace( QChar::Null, QChar::Space );
 
     LineLength::UnderlyingType position = 0;
-    position = type_safe::narrow_cast<LineLength::UnderlyingType>(
+    position = klogg::narrow_cast<LineLength::UnderlyingType>(
         line.indexOf( QChar::Tabulation, position ) );
     while ( position >= 0 ) {
         const auto spaces = TabStop - ( ( initialPosition.get() + position ) % TabStop );
         line.replace( position, 1, QString( spaces, QChar::Space ) );
-        position = type_safe::narrow_cast<LineLength::UnderlyingType>(
+        position = klogg::narrow_cast<LineLength::UnderlyingType>(
             line.indexOf( QChar::Tabulation, position ) );
     }
 
@@ -336,6 +399,6 @@ LineLength getUntabifiedLength( const LineType& utf8Line )
         tabPosition = utf8Line.find( '\t', tabPosition + 1 );
     }
 
-    return LineLength( type_safe::narrow_cast<LineLength::UnderlyingType>(
+    return LineLength( klogg::narrow_cast<LineLength::UnderlyingType>(
         static_cast<int64_t>( utf8Line.size() + totalSpaces ) ) );
 }

@@ -36,22 +36,20 @@ runs:
         packaging\windows\prepare_release.cmd
 
     - name: Win installer
-      uses: joncloud/makensis-action@v3.3
-      with:
-        script-file: klogg.nsi
-        arguments: "-DVERSION=%KLOGG_VERSION% -DPLATFORM=%KLOGG_ARCH% -DQT_MAJOR=%KLOGG_QT%" 
+      shell: cmd
+      run: |
+        makensis -DVERSION=%KLOGG_VERSION% -DPLATFORM=%KLOGG_ARCH% -DQT_MAJOR=%KLOGG_QT% klogg.nsi || exit /b 1
     
     - name: Win package
       shell: cmd
       run: |
-        md %KLOGG_BUILD_ROOT%\packages
-        xcopy klogg-%KLOGG_VERSION%-%KLOGG_ARCH%-%KLOGG_QT%-portable.zip %KLOGG_BUILD_ROOT%\packages /y
-        xcopy klogg-%KLOGG_VERSION%-%KLOGG_ARCH%-%KLOGG_QT%-pdb.zip %KLOGG_BUILD_ROOT%\packages /y
-        xcopy klogg-%KLOGG_VERSION%-%KLOGG_ARCH%-%KLOGG_QT%-setup.exe %KLOGG_BUILD_ROOT%\packages /y
+        if not exist "%KLOGG_BUILD_ROOT%\packages" mkdir "%KLOGG_BUILD_ROOT%\packages" || exit /b 1
+        copy /Y "klogg-%KLOGG_VERSION%-%KLOGG_ARCH%-%KLOGG_QT%-portable.zip" "%KLOGG_BUILD_ROOT%\packages\" || exit /b 1
+        copy /Y "klogg-%KLOGG_VERSION%-%KLOGG_ARCH%-%KLOGG_QT%-pdb.zip" "%KLOGG_BUILD_ROOT%\packages\" || exit /b 1
+        copy /Y "klogg-%KLOGG_VERSION%-%KLOGG_ARCH%-%KLOGG_QT%-setup.exe" "%KLOGG_BUILD_ROOT%\packages\" || exit /b 1
 
     #- name: Win codesign installer
     #  if: ${{ github.event_name != 'pull_request' }}
     #  shell: cmd
     #  run: |
     #    packaging\windows\codesign_client.exe --debug %KLOGG_BUILD_ROOT%\packages\klogg-%KLOGG_VERSION%-%KLOGG_ARCH%-%KLOGG_QT%-setup.exe
-      

@@ -49,7 +49,7 @@ parseBooleanExpressions( QString& pattern, bool isCaseSensitive, bool isPlainTex
     int rightQuote = -1;
 
     while ( currentIndex < pattern.size() ) {
-        leftQuote = type_safe::narrow_cast<int>( pattern.indexOf( QChar( '"' ), currentIndex ) );
+        leftQuote = klogg::narrow_cast<int>( pattern.indexOf( QChar( '"' ), currentIndex ) );
         if ( leftQuote < 0 ) {
             break;
         }
@@ -62,7 +62,7 @@ parseBooleanExpressions( QString& pattern, bool isCaseSensitive, bool isPlainTex
 
         while ( currentIndex < pattern.size() ) {
             rightQuote
-                = type_safe::narrow_cast<int>( pattern.indexOf( QChar( '"' ), currentIndex ) );
+                = klogg::narrow_cast<int>( pattern.indexOf( QChar( '"' ), currentIndex ) );
             if ( rightQuote < 0 ) {
                 break;
             }

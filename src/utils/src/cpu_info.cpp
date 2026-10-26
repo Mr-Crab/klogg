@@ -20,7 +20,7 @@
 #include "cpu_info.h"
 #include <QtGlobal>
 
-#if defined( Q_OS_WIN )
+#if defined( Q_OS_WIN ) && ( defined( _M_IX86 ) || defined( _M_X64 ) )
 
 #include <array>
 #include <bitset>
