@@ -42,7 +42,6 @@
 // It also interacts with the sets of data (full and filtered).
 
 #include "abstractlogview.h"
-#include "active_screen.h"
 #include "linetypes.h"
 #include "log.h"
 
@@ -472,10 +471,10 @@ void CrawlerWidget::saveAsPredefinedFilter()
     Q_EMIT saveCurrentSearchAsPredefinedFilter( currentText );
 }
 
-void CrawlerWidget::showSearchContextMenu()
+void CrawlerWidget::showSearchContextMenu( const QPoint& pos )
 {
     if ( searchLineContextMenu_ )
-        searchLineContextMenu_->exec( QCursor::pos( activeScreen( this ) ) );
+        searchLineContextMenu_->exec( searchLineEdit_->mapToGlobal( pos ) );
 }
 
 // When receiving the 'newDataAvailable' signal from LogFilteredData

@@ -659,7 +659,7 @@ void AbstractLogView::mousePressEvent( QMouseEvent* mouseEvent )
                      &AbstractLogView::clearColorLabels );
         }
         // Display the popup (blocking)
-        popupMenu_->exec( QCursor::pos( activeScreen( this ) ) );
+        popupMenu_->exec( mouseEvent->globalPos() );
 
         highlightersMenu_->clearHighlightersMenu();
         colorLablesActionGroup->deleteLater();

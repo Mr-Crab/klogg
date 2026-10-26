@@ -251,7 +251,7 @@ class CrawlerWidget : public QSplitter,
     void setSearchPatternFromPredefinedFilters( const QList<PredefinedFilter>& filters );
 
     // Search Context Menu
-    void showSearchContextMenu();
+    void showSearchContextMenu( const QPoint& pos );
 
     // Called when a match is hovered on in the filtered view
     void mouseHoveredOverMatch( LineNumber line );
