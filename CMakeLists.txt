@@ -8,7 +8,7 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum CMake policy version"
 
 project(
   klogg
-  VERSION 24.11.0
+  VERSION 24.12.0
   DESCRIPTION "klogg log viewer"
   LANGUAGES C CXX ASM
 )

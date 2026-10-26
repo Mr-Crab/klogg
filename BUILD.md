@@ -156,7 +156,7 @@ Build a relocatable configuration from an x64 or ARM64 Native Tools Command Prom
 
 ```
 set KLOGG_BUILD_ROOT=build-release
-set KLOGG_VERSION=24.11.0.1
+set KLOGG_VERSION=24.12.0.1
 set KLOGG_ARCH=x64
 set KLOGG_QT=Qt6
 set KLOGG_QT_DIR=E:\software\QT\6.7.3\msvc2022_64
