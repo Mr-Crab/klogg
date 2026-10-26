@@ -21,6 +21,9 @@
 #define KLOGG_COLORLABELSMANAGER_H
 
 #include "abstractlogview.h"
+#include "linecolorlabels.h"
+
+#include <memory>
 #include <optional>
 #include <qobject.h>
 #include <qobjectdefs.h>
@@ -30,18 +33,33 @@ class ColorLabelsManager {
   public:
     using QuickHighlightersCollection = std::vector<AbstractLogView::QuickHighlighters>;
 
-    QuickHighlightersCollection colorLabels() const;
+    struct ColorLabelSnapshot {
+        QuickHighlightersCollection quickHighlighters;
+        std::shared_ptr<const LineColorLabels> lineLabels;
+    };
 
-    QuickHighlightersCollection setColorLabel( size_t label, const QString& text );
-    QuickHighlightersCollection setNextColorLabel( const QString& text );
+    ColorLabelSnapshot colorLabels() const;
 
-    QuickHighlightersCollection clear();
+    ColorLabelSnapshot setColorLabel( size_t label, const QString& text );
+    ColorLabelSnapshot setNextColorLabel( const QString& text );
+
+    ColorLabelSnapshot setLineColorLabel( size_t label, const klogg::vector<LineNumber>& lines );
+    ColorLabelSnapshot setNextLineColorLabel( const klogg::vector<LineNumber>& lines );
+    ColorLabelSnapshot removeLineColorLabels( const klogg::vector<LineNumber>& lines );
+
+    ColorLabelSnapshot clear();
+    ColorLabelSnapshot clearLineLabels();
+    ColorLabelSnapshot cropLineLabels( LineNumber maxLine );
 
   private:
+    ColorLabelSnapshot snapshot() const;
+    std::optional<size_t> nextLabelIndex() const;
+
     QuickHighlightersCollection updateColorLabel( size_t label, const QString& text,
                                                   bool replaceCurrent );
 
     QuickHighlightersCollection quickHighlighters_ = QuickHighlightersCollection{9};
+    std::shared_ptr<LineColorLabels> lineLabels_ = std::make_shared<LineColorLabels>();
     std::optional<size_t> currentLabel_;
 };
 

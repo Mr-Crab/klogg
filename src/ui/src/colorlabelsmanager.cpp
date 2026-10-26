@@ -19,32 +19,98 @@
 
 #include "colorlabelsmanager.h"
 #include "highlighterset.h"
+
 #include <algorithm>
 #include <vector>
 
-ColorLabelsManager::QuickHighlightersCollection ColorLabelsManager::colorLabels() const
+ColorLabelsManager::ColorLabelSnapshot ColorLabelsManager::snapshot() const
 {
-    return quickHighlighters_;
+    return { quickHighlighters_,
+             std::static_pointer_cast<const LineColorLabels>( lineLabels_ ) };
 }
 
-ColorLabelsManager::QuickHighlightersCollection ColorLabelsManager::clear()
+ColorLabelsManager::ColorLabelSnapshot ColorLabelsManager::colorLabels() const
+{
+    return snapshot();
+}
+
+ColorLabelsManager::ColorLabelSnapshot ColorLabelsManager::clear()
 {
     for ( auto& quickHighlighters : quickHighlighters_ ) {
         quickHighlighters.clear();
     }
+    lineLabels_->clear();
     currentLabel_.reset();
-    
-    return quickHighlighters_;
+
+    return snapshot();
 }
 
-ColorLabelsManager::QuickHighlightersCollection
+ColorLabelsManager::ColorLabelSnapshot
 ColorLabelsManager::setColorLabel( size_t label, const QString& text )
 {
-    return updateColorLabel( label, text, true );
+    updateColorLabel( label, text, true );
+    return snapshot();
 }
 
-ColorLabelsManager::QuickHighlightersCollection
+ColorLabelsManager::ColorLabelSnapshot
 ColorLabelsManager::setNextColorLabel( const QString& text )
+{
+    const auto nextLabel = nextLabelIndex();
+    if ( !nextLabel ) {
+        return snapshot();
+    }
+
+    currentLabel_ = *nextLabel;
+    updateColorLabel( *nextLabel, text, false );
+
+    return snapshot();
+}
+
+ColorLabelsManager::ColorLabelSnapshot
+ColorLabelsManager::setLineColorLabel( size_t label, const klogg::vector<LineNumber>& lines )
+{
+    if ( label < quickHighlighters_.size() ) {
+        lineLabels_->set( label, lines );
+    }
+    return snapshot();
+}
+
+ColorLabelsManager::ColorLabelSnapshot
+ColorLabelsManager::setNextLineColorLabel( const klogg::vector<LineNumber>& lines )
+{
+    const auto nextLabel = nextLabelIndex();
+    if ( !nextLabel ) {
+        return snapshot();
+    }
+
+    currentLabel_ = *nextLabel;
+    if ( *nextLabel < quickHighlighters_.size() ) {
+        lineLabels_->set( *nextLabel, lines );
+    }
+
+    return snapshot();
+}
+
+ColorLabelsManager::ColorLabelSnapshot
+ColorLabelsManager::removeLineColorLabels( const klogg::vector<LineNumber>& lines )
+{
+    lineLabels_->remove( lines );
+    return snapshot();
+}
+
+ColorLabelsManager::ColorLabelSnapshot ColorLabelsManager::clearLineLabels()
+{
+    lineLabels_->clear();
+    return snapshot();
+}
+
+ColorLabelsManager::ColorLabelSnapshot ColorLabelsManager::cropLineLabels( LineNumber maxLine )
+{
+    lineLabels_->crop( maxLine );
+    return snapshot();
+}
+
+std::optional<size_t> ColorLabelsManager::nextLabelIndex() const
 {
     const auto& quickHighlightersConfiguration
         = HighlighterSetCollection::get().quickHighlighters();
@@ -59,7 +125,7 @@ ColorLabelsManager::setNextColorLabel( const QString& text )
     }
 
     if ( cycle.empty() ) {
-        return quickHighlighters_;
+        return {};
     }
 
     auto nextLabel = cycle.front();
@@ -71,9 +137,7 @@ ColorLabelsManager::setNextColorLabel( const QString& text )
         }
     }
 
-    currentLabel_ = nextLabel;
-
-    return updateColorLabel( nextLabel, text, false );
+    return nextLabel;
 }
 
 ColorLabelsManager::QuickHighlightersCollection

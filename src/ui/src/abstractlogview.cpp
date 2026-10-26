@@ -88,6 +88,7 @@
 #include "configuration.h"
 #include "highlighterset.h"
 #include "highlightersmenu.h"
+#include "linecolorlabels.h"
 #include "log.h"
 #include "overview.h"
 #include "quickfind.h"
@@ -135,6 +136,8 @@ inline int countLeadingZeroes( uint64_t value )
 #endif
 
 namespace {
+
+constexpr int RemoveColorLabelAction = -1;
 
 int mapPullToFollowLength( int length );
 
@@ -572,23 +575,57 @@ void AbstractLogView::mousePressEvent( QMouseEvent* mouseEvent )
         connect( colorLablesActionGroup, &QActionGroup::triggered, this,
                  &AbstractLogView::setColorLabel );
         colorLabelsMenu_->clear();
-        colorLabelsMenu_->setEnabled( selection_.isPortion() || selection_.isSingleLine() );
+        const auto selectedLines = selection_.getLines();
+        colorLabelsMenu_->setEnabled( !selectedLines.empty() );
         if ( colorLabelsMenu_->isEnabled() ) {
-            auto selectedText = selection_.getSelectedText( logData_ );
+            const auto lineMode = !selection_.isPortion() && !selectedLines.empty();
+
             std::optional<size_t> currentLabel;
-            for ( auto i = 0u; i < quickHighlighters_.size(); ++i ) {
-                if ( quickHighlighters_[ i ].contains( selectedText ) ) {
-                    currentLabel = i;
-                    break;
+            auto allLinesHaveSameLabel = true;
+            if ( lineMode ) {
+                std::optional<size_t> firstLineLabel;
+                for ( auto i = 0u; i < selectedLines.size(); ++i ) {
+                    std::optional<size_t> lineLabel;
+                    if ( lineColorLabels_ && !lineColorLabels_->isEmpty() ) {
+                        lineLabel = lineColorLabels_->labelFor(
+                            sourceLineNumber( selectedLines[ i ] ) );
+                    }
+
+                    if ( i == 0 ) {
+                        firstLineLabel = lineLabel;
+                    }
+                    else if ( lineLabel != firstLineLabel ) {
+                        allLinesHaveSameLabel = false;
+                        break;
+                    }
+                }
+
+                if ( allLinesHaveSameLabel ) {
+                    currentLabel = firstLineLabel;
+                }
+            }
+            else {
+                const auto selectedText = selection_.getSelectedText( logData_ );
+                for ( auto i = 0u; i < quickHighlighters_.size(); ++i ) {
+                    if ( quickHighlighters_[ i ].contains( selectedText ) ) {
+                        currentLabel = i;
+                        break;
+                    }
                 }
             }
 
             auto noneAction = colorLabelsMenu_->addAction( tr( "None" ) );
             noneAction->setActionGroup( colorLablesActionGroup );
             noneAction->setCheckable( true );
-            noneAction->setChecked( !currentLabel.has_value() );
-            if ( currentLabel ) {
-                noneAction->setData( static_cast<unsigned>( *currentLabel ) );
+            if ( lineMode ) {
+                noneAction->setData( RemoveColorLabelAction );
+                noneAction->setChecked( allLinesHaveSameLabel && !currentLabel.has_value() );
+            }
+            else {
+                noneAction->setChecked( !currentLabel.has_value() );
+                if ( currentLabel ) {
+                    noneAction->setData( static_cast<unsigned>( *currentLabel ) );
+                }
             }
 
             const auto& quickHighlightersConfiguration
@@ -1276,7 +1313,15 @@ void AbstractLogView::setSearchPattern( const RegularExpressionPattern& pattern 
 void AbstractLogView::setQuickHighlighters(
     const std::vector<QuickHighlighters>& quickHighlighters )
 {
+    setColorLabels( quickHighlighters, lineColorLabels_ );
+}
+
+void AbstractLogView::setColorLabels(
+    const std::vector<QuickHighlighters>& quickHighlighters,
+    std::shared_ptr<const LineColorLabels> lineColorLabels )
+{
     quickHighlighters_ = quickHighlighters;
+    lineColorLabels_ = std::move( lineColorLabels );
     forceRefresh();
 }
 
@@ -1662,6 +1707,16 @@ LineNumber AbstractLogView::getTopLine() const
 QString AbstractLogView::getSelectedText() const
 {
     return selection_.getSelectedText( logData_ );
+}
+
+klogg::vector<LineNumber> AbstractLogView::getSelectedLines() const
+{
+    return selection_.getLines();
+}
+
+LineNumber AbstractLogView::sourceLineNumber( LineNumber viewLine ) const
+{
+    return displayLineNumber( viewLine ) - 1_lcount;
 }
 
 bool AbstractLogView::isPartialSelection() const
@@ -2354,6 +2409,10 @@ void AbstractLogView::drawTextArea( QPaintDevice* paintDevice )
         const int xPos = contentStartPosX + ContentMarginWidth;
 
         HighlightedMatchRanges highlighterMatches;
+        std::optional<size_t> lineLabel;
+        if ( lineColorLabels_ && !lineColorLabels_->isEmpty() ) {
+            lineLabel = lineColorLabels_->labelFor( sourceLineNumber( lineNumber ) );
+        }
 
         if ( selection_.isLineSelected( lineNumber ) && !selection_.isSingleLine() ) {
             // Reverse the selected line
@@ -2365,16 +2424,25 @@ void AbstractLogView::drawTextArea( QPaintDevice* paintDevice )
             foreColor = palette.color( QPalette::Text );
             backColor = palette.color( QPalette::Base );
 
+            if ( lineLabel && static_cast<int>( *lineLabel ) < quickHighlighters.size() ) {
+                const auto& labelColor = quickHighlighters.at( static_cast<int>( *lineLabel ) );
+                foreColor = labelColor.color.foreColor;
+                backColor = labelColor.color.backColor;
+            }
+
             if ( lineNumber < searchStartIndex || lineNumber >= searchEndIndex ) {
                 foreColor = palette.brush( QPalette::Disabled, QPalette::Text ).color();
             }
             else {
-                const auto highlightType = highlighterSet.matchLine( logLine, highlighterMatches );
+                if ( !lineLabel ) {
+                    const auto highlightType
+                        = highlighterSet.matchLine( logLine, highlighterMatches );
 
-                if ( highlightType == HighlighterMatchType::LineMatch ) {
-                    // color applies to whole line
-                    foreColor = highlighterMatches.front().foreColor();
-                    backColor = highlighterMatches.front().backColor();
+                    if ( highlightType == HighlighterMatchType::LineMatch ) {
+                        // color applies to whole line
+                        foreColor = highlighterMatches.front().foreColor();
+                        backColor = highlighterMatches.front().backColor();
+                    }
                 }
 
                 if ( patternHighlight ) {
@@ -2606,7 +2674,13 @@ void AbstractLogView::disableFollow()
 void AbstractLogView::setColorLabel( QAction* action )
 {
     if ( action->data().isValid() ) {
-        Q_EMIT addColorLabel( static_cast<size_t>( action->data().toInt() ) );
+        const auto label = action->data().toInt();
+        if ( label == RemoveColorLabelAction ) {
+            Q_EMIT removeColorLabelFromSelection();
+        }
+        else {
+            Q_EMIT addColorLabel( static_cast<size_t>( label ) );
+        }
     }
     else {
         Q_EMIT clearColorLabels();

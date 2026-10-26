@@ -106,6 +106,11 @@ struct CrawlerWidget::access_by<CrawlerWidgetPrivate> {
         return crawler->filteredView_->getSelectedText();
     }
 
+    LineNumber filteredSourceLine( LineNumber line )
+    {
+        return crawler->filteredView_->sourceLineNumber( line );
+    }
+
     void setSearchPattern( const QString& pattern )
     {
         QTest::keyClicks( crawler->searchLineEdit_, pattern );
@@ -226,6 +231,7 @@ SCENARIO( "Crawler widget search", "[ui]" )
             THEN( "single line match" )
             {
                 REQUIRE( crawlerVisitor.getLogFilteredNbLines().get() == 1 );
+                REQUIRE( crawlerVisitor.filteredSourceLine( 0_lnum ) == 10_lnum );
             }
         }
 

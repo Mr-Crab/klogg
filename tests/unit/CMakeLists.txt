@@ -1,5 +1,6 @@
 # Add test cpp file
 add_executable(klogg_tests
+    colorlabelsmanager_test.cpp
     linepositionarray_test.cpp
     patternmatcher_test.cpp
     tests_main.cpp

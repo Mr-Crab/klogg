@@ -43,6 +43,7 @@
 #include <array>
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <qchar.h>
 #include <string_view>
 #include <utility>
@@ -72,6 +73,7 @@ class QMenu;
 class QAction;
 class QShortcut;
 class HighlightersMenu;
+class LineColorLabels;
 
 // Utility class representing a buffer for number entered on the keyboard
 // The buffer keep at most 7 digits, and reset itself after a timeout.
@@ -134,6 +136,10 @@ class AbstractLogView : public QAbstractScrollArea, public SearchableWidgetInter
     LineNumber getTopLine() const;
     // Return the text of the current selection.
     QString getSelectedText() const;
+    // Return the selected line indexes as displayed by this view.
+    klogg::vector<LineNumber> getSelectedLines() const;
+    // Map a displayed line index to the corresponding source log line.
+    LineNumber sourceLineNumber( LineNumber viewLine ) const;
     // True for partial selection
     bool isPartialSelection() const;
     // Instructs the widget to select the whole text.
@@ -155,6 +161,8 @@ class AbstractLogView : public QAbstractScrollArea, public SearchableWidgetInter
 
     using QuickHighlighters = QStringList;
     void setQuickHighlighters( const std::vector<QuickHighlighters>& wordHighlighters );
+    void setColorLabels( const std::vector<QuickHighlighters>& wordHighlighters,
+                         std::shared_ptr<const LineColorLabels> lineColorLabels );
 
     void registerShortcuts();
 
@@ -239,6 +247,7 @@ class AbstractLogView : public QAbstractScrollArea, public SearchableWidgetInter
 
     void addColorLabel( size_t label );
     void addNextColorLabel();
+    void removeColorLabelFromSelection();
     void clearColorLabels();
     void highlightersChange();
 
@@ -359,6 +368,7 @@ class AbstractLogView : public QAbstractScrollArea, public SearchableWidgetInter
     RegularExpressionPattern searchPattern_;
 
     std::vector<QuickHighlighters> quickHighlighters_ = std::vector<QuickHighlighters>{ 9 };
+    std::shared_ptr<const LineColorLabels> lineColorLabels_;
 
     // Position of the view, those are crucial to control drawing
     // firstLine gives the position of the view,

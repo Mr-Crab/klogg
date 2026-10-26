@@ -46,6 +46,7 @@ add_library(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/decompressor.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/fontutils.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/colorlabelsmanager.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/linecolorlabels.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/highlighteredit.ui
   ${CMAKE_CURRENT_SOURCE_DIR}/include/highlightersetedit.ui
   ${CMAKE_CURRENT_SOURCE_DIR}/include/highlightersdialog.ui

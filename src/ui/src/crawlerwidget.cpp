@@ -269,6 +269,7 @@ void CrawlerWidget::reload()
     constexpr auto DropCache = true;
     logFilteredData_->clearSearch( DropCache );
     logFilteredData_->clearMarks();
+    updateColorLabels( colorLabelsManager_.clearLineLabels() );
     filteredView_->updateData();
     printSearchInfoMessage();
 
@@ -741,6 +742,7 @@ void CrawlerWidget::fileChangedHandler( MonitoredFileStatus status )
     if ( status == MonitoredFileStatus::Truncated ) {
         // Clear all marks (TODO offer the option to keep them)
         logFilteredData_->clearMarks();
+        updateColorLabels( colorLabelsManager_.clearLineLabels() );
         if ( !searchInfoLine_->text().isEmpty() ) {
             // Invalidate the search
             constexpr auto DropCache = true;
@@ -1285,6 +1287,9 @@ void CrawlerWidget::setup()
     connect( logMainView_, &AbstractLogView::addColorLabel, this,
              &CrawlerWidget::addColorLabelToSelection );
 
+    connect( logMainView_, &AbstractLogView::removeColorLabelFromSelection, this,
+             &CrawlerWidget::removeColorLabelFromSelection );
+
     connect( logMainView_, &AbstractLogView::sendSelectionToScratchpad, this,
              [ this ]() { Q_EMIT sendToScratchpad( logMainView_->getSelectedText() ); } );
 
@@ -1407,6 +1412,9 @@ void CrawlerWidget::connectAllFilteredViewSlots( FilteredView* view )
     connect( view, &AbstractLogView::addColorLabel, this,
              &CrawlerWidget::addColorLabelToSelection );
 
+    connect( view, &AbstractLogView::removeColorLabelFromSelection, this,
+             &CrawlerWidget::removeColorLabelFromSelection );
+
     connect( view, &AbstractLogView::sendSelectionToScratchpad, this,
              [ view, this ]() { Q_EMIT sendToScratchpad( view->getSelectedText() ); } );
 
@@ -1420,6 +1428,8 @@ void CrawlerWidget::connectAllFilteredViewSlots( FilteredView* view )
 
     connect( logMainView_, &LogMainView::exitView, view,
              QOverload<>::of( &FilteredView::setFocus ) );
+
+    applyColorLabels( view, colorLabelsManager_.colorLabels() );
 }
 
 void CrawlerWidget::registerShortcuts()
@@ -1730,26 +1740,93 @@ void CrawlerWidget::changeTopViewSize( int32_t delta )
     LOG_DEBUG << "CrawlerWidget::changeTopViewSize " << sizes().at( 0 );
 }
 
+klogg::vector<LineNumber>
+CrawlerWidget::selectedSourceLines( AbstractLogView* view ) const
+{
+    klogg::vector<LineNumber> sourceLines;
+    if ( !view ) {
+        return sourceLines;
+    }
+
+    const auto selectedLines = view->getSelectedLines();
+    sourceLines.reserve( selectedLines.size() );
+    for ( const auto line : selectedLines ) {
+        const auto sourceLine = view->sourceLineNumber( line );
+        if ( sourceLine < logData_->getNbLine() ) {
+            sourceLines.push_back( sourceLine );
+        }
+    }
+
+    return sourceLines;
+}
+
+void CrawlerWidget::applyColorLabels(
+    AbstractLogView* view, const ColorLabelsManager::ColorLabelSnapshot& labels )
+{
+    if ( view ) {
+        view->setColorLabels( labels.quickHighlighters, labels.lineLabels );
+    }
+}
+
+void CrawlerWidget::updateColorLabels(
+    const ColorLabelsManager::ColorLabelSnapshot& labels )
+{
+    applyColorLabels( logMainView_, labels );
+    for ( const auto& viewData : filteredViewsData_ ) {
+        applyColorLabels( viewData.first, labels );
+    }
+}
+
 void CrawlerWidget::addColorLabelToSelection( size_t label )
 {
-    updateColorLabels( colorLabelsManager_.setColorLabel( label, getSelectedText() ) );
+    auto* view = qobject_cast<AbstractLogView*>( sender() );
+    if ( !view ) {
+        view = activeView();
+    }
+    if ( !view || view->getSelectedLines().empty() ) {
+        return;
+    }
+
+    if ( !view->isPartialSelection() ) {
+        updateColorLabels(
+            colorLabelsManager_.setLineColorLabel( label, selectedSourceLines( view ) ) );
+    }
+    else {
+        updateColorLabels( colorLabelsManager_.setColorLabel( label, view->getSelectedText() ) );
+    }
 }
 
 void CrawlerWidget::addNextColorLabelToSelection()
 {
-    updateColorLabels( colorLabelsManager_.setNextColorLabel( getSelectedText() ) );
+    auto* view = activeView();
+    if ( !view || view->getSelectedLines().empty() ) {
+        return;
+    }
+
+    if ( !view->isPartialSelection() ) {
+        updateColorLabels(
+            colorLabelsManager_.setNextLineColorLabel( selectedSourceLines( view ) ) );
+    }
+    else {
+        updateColorLabels( colorLabelsManager_.setNextColorLabel( view->getSelectedText() ) );
+    }
+}
+
+void CrawlerWidget::removeColorLabelFromSelection()
+{
+    auto* view = qobject_cast<AbstractLogView*>( sender() );
+    if ( !view ) {
+        view = activeView();
+    }
+    if ( view && !view->isPartialSelection() ) {
+        updateColorLabels(
+            colorLabelsManager_.removeLineColorLabels( selectedSourceLines( view ) ) );
+    }
 }
 
 void CrawlerWidget::clearColorLabels()
 {
     updateColorLabels( colorLabelsManager_.clear() );
-}
-
-void CrawlerWidget::updateColorLabels(
-    const ColorLabelsManager::QuickHighlightersCollection& labels )
-{
-    logMainView_->setQuickHighlighters( labels );
-    filteredView_->setQuickHighlighters( labels );
 }
 
 //

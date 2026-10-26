@@ -264,6 +264,7 @@ class CrawlerWidget : public QSplitter,
 
     void addColorLabelToSelection( size_t label );
     void addNextColorLabelToSelection();
+    void removeColorLabelFromSelection();
     void clearColorLabels();
 
     void changeFilteredView(int tabIndex);
@@ -343,7 +344,10 @@ class CrawlerWidget : public QSplitter,
 
     void resetStateOnSearchPatternChanges();
 
-    void updateColorLabels( const ColorLabelsManager::QuickHighlightersCollection& labels );
+    klogg::vector<LineNumber> selectedSourceLines( AbstractLogView* view ) const;
+    void applyColorLabels( AbstractLogView* view,
+                           const ColorLabelsManager::ColorLabelSnapshot& labels );
+    void updateColorLabels( const ColorLabelsManager::ColorLabelSnapshot& labels );
 
     void connectAllFilteredViewSlots( FilteredView* view);
 
