@@ -10,6 +10,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
     steps:
     - uses: actions/checkout@v4
     - name: Download artifacts for last successful CI workflow
@@ -33,6 +36,7 @@ jobs:
       run: ls -R ./packages-*
 
     - name: Setup Sentry CLI
+      if: ${{ false }}
       uses: mathrix-education/setup-sentry-cli@0.1.0
       env:
         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
@@ -42,12 +46,14 @@ jobs:
         project: klogg
 
     - name: Create Sentry release
+      if: ${{ false }}
       shell: sh
       run: |
         sentry-cli releases new $KLOGG_VERSION
         sentry-cli releases set-commits --auto $KLOGG_VERSION
 
     - name: Upload symbols linux
+      if: ${{ false }}
       shell: sh
       run: |
         xz -d ./packages-focal/klogg_focal.debug.xz
@@ -62,18 +68,21 @@ jobs:
         sentry-cli upload-dif ./packages-appimage/klogg_appimage.debug  ./packages-appimage/klogg_appimage
 
     - name: Upload symbols mac
+      if: ${{ false }}
       shell: sh
       run: |
         sentry-cli upload-dif ./packages-macos-intel-qt6/klogg-x64.app/Contents/MacOS/klogg ./packages-macos-intel-qt6/klogg-x64.dSym
         sentry-cli upload-dif ./packages-macos-arm-qt6/klogg-arm64.app/Contents/MacOS/klogg ./packages-macos-arm-qt6/klogg-arm64.dSym
 
     - name: Upload symbols win
+      if: ${{ false }}
       shell: sh
       run: |
         sentry-cli upload-dif ./packages-windows-x64-qt6/klogg-$KLOGG_VERSION-x64-Qt6-pdb.zip
         sentry-cli upload-dif ./packages-windows-arm64-qt6/klogg-$KLOGG_VERSION-arm64-Qt6-pdb.zip
 
     - name: Cleanup release artifacts
+      if: ${{ false }}
       shell: sh
       run: |
         rm -rf ./packages-focal/klogg_focal
@@ -93,6 +102,7 @@ jobs:
         rm ./linux-debug/*.debug
 
     - name: Prepare binary artifacts
+      if: ${{ false }}
       shell: sh
       run: |
         mkdir ./packages-bin
@@ -101,6 +111,7 @@ jobs:
         mv ./klogg_version/klogg_version.txt ./packages-bin
 
     - name: Prepare checksums
+      if: ${{ false }}
       shell: sh
       run: |
         sha256sum --binary ./packages-bin/* ./packages-focal/* ./packages-jammy/* ./packages-noble/* ./packages-oracle/* ./packages-appimage/*  > ./packages-bin/klogg-$KLOGG_VERSION-sha256.txt
@@ -108,7 +119,7 @@ jobs:
     - name: Release win
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
-        repo_token: ${{ secrets.KLOGG_GITHUB_TOKEN }}
+        repo_token: ${{ github.token }}
         automatic_release_tag: continuous-win
         prerelease: true
         files: |
@@ -116,9 +127,10 @@ jobs:
           ./packages-windows-arm64-qt6/*
 
     - name: Release linux
+      if: ${{ false }}
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
-        repo_token: ${{ secrets.KLOGG_GITHUB_TOKEN }}
+        repo_token: ${{ github.token }}
         automatic_release_tag: continuous-linux
         prerelease: true
         files: |
@@ -131,9 +143,10 @@ jobs:
           ./linux-debug/*
 
     - name: Release mac
+      if: ${{ false }}
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
-        repo_token: ${{ secrets.KLOGG_GITHUB_TOKEN }}
+        repo_token: ${{ github.token }}
         automatic_release_tag: continuous-osx
         prerelease: true
         files: |
@@ -141,6 +154,7 @@ jobs:
           ./packages-macos-arm-qt6/*
 
     - name: Discord notification
+      if: ${{ false }}
       env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_NEW_VERSIONS_WEBHOOK }}
         DISCORD_EMBEDS: '[{"title": "Windows", "url": "https://github.com/variar/klogg/releases/tag/continuous-win"}, {"title": "Linux", "url": "https://github.com/variar/klogg/releases/tag/continuous-linux"}, {"title": "Mac", "url": "https://github.com/variar/klogg/releases/tag/continuous-osx"}]'
